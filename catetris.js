@@ -61,7 +61,7 @@ function vector(x, y)
 // Converts a 2d position to a 1d position, used for accessing a 1D array with 2D coordinates.
 function to1D(x, y, gridWidth)
 {
-  y*gridWidth+x
+  return y*gridWidth+x;
 }
 
 function FallingPiece(type, position)
@@ -70,31 +70,59 @@ function FallingPiece(type, position)
   this.rotation = 0;
   this.type = type;
   this.set = 0;
-  
+  var gridSize =   getTetronimoGridSize(this.type);
   // Returns a 2d buffer containing the index to the type.
   this.getBuffer = function()
   {
+    // TODO:
+    // We should precompute all the falling pieces beforehand - 
+    // all rotations of all pieces will easily fit in memory.
+
     // Get the unrotated collision buffer for this piece:
-    var gridSize = getTetronimoGridSize(this.type);
-    var piecePositions = getTetronimoPositions(this.type);
+    var piecePositions = this.getPiecePositions();
+    /*
+    getTetronimoPositions(this.type);
        
     for(var i=0; i<this.rotation; i++)
     {
-      var x = 2-piecePositions[i].y;
+      var x = 2-piecePositions[i].y; // incorrect
       var y = piecePositions[i].x;
       
       piecePositions[i].x=x;
       piecePositions[i].y=y;
     }
+    */
     
     // Now generate the buffer:
     var buffer = nullArray(gridSize*gridSize);
     for(var i=0; i<piecePositions.length; i++)
     {
-      var piece=Piece(this.type, this.set, this.rotation, i); 
+      var piece=new Piece(this.type, this.set, this.rotation, i); 
+      var index = to1D(piecePositions[i].x, piecePositions[i].y, gridSize);
+      buffer[index]=piece;
     }
-    
+       
     return buffer;
+  }
+  
+  this.getPiecePositions = function()
+  {
+    var piecePositions = getTetronimoPositions(this.type);
+       
+    for(var i=0; i<this.rotation; i++)
+    {
+      var x = 2-piecePositions[i].y; // incorrect
+      var y = piecePositions[i].x;
+      
+      piecePositions[i].x=x;
+      piecePositions[i].y=y;
+    }
+    return piecePositions;
+  }
+  
+  this.getGridSize = function()
+  {
+    return gridSize;
   }
 }
 
@@ -127,6 +155,28 @@ function GameState(widthIn, heightIn)
       // TODO: Generate random number:
       nextPiece = 0;
     }
+    else
+    {
+      fallingPiece.position.y++;
+      
+      var fallingPiecePositions = fallingPiece.getPiecePositions();
+      if(this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y))
+      {
+        fallingPiece.position.y--;
+        
+        // Add the falling piece to the board at its previous height:
+        for(var i=0; i<fallingPiecePositions.length; i++)
+        {
+          
+          var index = to1D(fallingPiecePositions[i].x+fallingPiece.position.x, fallingPiecePositions[i].y+fallingPiece.position.y, width);
+          var piece=new Piece(fallingPiece.type, fallingPiece.set, fallingPiece.rotation, i); 
+          boardState[index]=piece;
+        }
+        fallingPiece = null;       
+      }
+      
+      
+    }
   }
   
   this.getFallingPiece = function()
@@ -146,14 +196,7 @@ function GameState(widthIn, heightIn)
   
   var boardState = nullArray(width * height);//new Array(width * height);
   var fallingPiece = null;
-  
-  /*
-  for(var n=0; n<gameWidth * gameHeight; n++)
-  {
-    boardState[n]=null;
-  }
-  */
-  
+   
   this.getPiece = function(x, y)
   {
     return boardState[y*gameWidth+x];
@@ -168,6 +211,58 @@ function GameState(widthIn, heightIn)
   {
     return boardState;
   }
+  
+  /*
+  this.checkFallingPieceCollisions = function()
+  {
+    var fallingPiecePositions = fallingPiece.getPiecePositions();
+    return (this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y));
+  }
+  */
+  
+  // Checks if the given positionList collides with another block in boardGrid,
+  // or if a position in positionList is off-grid.
+  this.checkCollision = function(boardGrid, positionList, offsetX, offsetY)
+  {
+    for(var i=0; i<positionList.length; i++)
+    {
+      if(positionList[i].x + offsetX < 0 || positionList[i].x + offsetX >= width)
+      {
+        return true;
+      }
+      if(positionList[i].y + offsetY < 0 || positionList[i].y + offsetY >= height)
+      {
+        return true;
+      }
+      
+      var index = to1D(positionList[i].x+offsetX, positionList[i].y+offsetY, width);
+      if(boardGrid[index]!=null)
+      {
+        console.log("collision detected");
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  this.nudgeLeft = function()
+  {
+    this.nudgeX(-1);
+  }
+  
+  this.nudgeX=function(x)
+  {
+    if(!fallingPiece)
+    {
+      return;
+    }
+    fallingPiece.position.x+=x;
+    var fallingPiecePositions = fallingPiece.getPiecePositions();
+    if(this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y))
+    {
+      fallingPiece.position.x-=x;
+    }
+  }
 };
 
 var globalGame = null;
@@ -175,13 +270,26 @@ var globalGame = null;
 
 // Handles tying input to game state and rendering:
 function Game(context)
-{
+{     
   var tetronimoI = makeSprite("I.png");
   var context = context;
   var gameState = new GameState(gameWidth, gameHeight);
+  var graphicalPieceSize = squareSize + edgeOverlap*2;
+  globalGame = this;
+  // Start listening for keyboard input:
+  //document.addEventListener('keydown', globalGame.keyEvent, true);
+  document.addEventListener('keydown', function(event)
+  {
+    if(event.keyCode == 65)
+    {
+      gameState.nudgeLeft();
+    }
+  });
+  
   
   // Test initialisation
   {
+  /*
   var piece = new Piece(0, 0, 2, 0);
   gameState.setPiece(3, 19, piece);
         
@@ -206,13 +314,13 @@ function Game(context)
       gameState.setPiece(5, 15, v3);
       gameState.setPiece(6, 15, v4);
     }
+    */
   }
     
   this.run = function()
   {
-      globalGame = this;
-      var graphicalPieceSize = squareSize + edgeOverlap*2;
-      
+      drawBackground(context);
+              
       // Draw the game board:
       var state = gameState.getGraphicalState();
          
@@ -223,12 +331,37 @@ function Game(context)
           var p = gameState.getPiece(x, y);
           if(p)
           {
-            DrawPiece(context, p, x, y);
+            this.drawPiece(context, p, x, y);
           }
         }
       }
+      
+      var fallingPiece = gameState.getFallingPiece();
+      
+      
+      if(fallingPiece)
+      {
+        // Why a 2D buffer? Why not a list of the coordinates instead?
+        var fallingBuffer=fallingPiece.getBuffer();
+        var gridSize=fallingPiece.getGridSize();
+        //for(var y=fallingPiece.position.y; y<fallingPiece.position.y+gridSize; y++)
+        for(var y=0; y<gridSize; y++)
+        {
+          for(var x=0; x<gridSize; x++)
+          //for(var x=fallingPiece.position.x; x<fallingPiece.position.x+gridSize; x++)
+          {
+            // console.log("drawingFalling at X: "+fallingPiece.position.x+" Y: "+fallingPiece.position.y);
+            var piece=fallingBuffer[to1D(x, y, gridSize)];
+            if(piece)
+            {
+              this.drawPiece(context, piece, fallingPiece.position.x+x, fallingPiece.position.y+y);
+            }
+          }
+        }
+      }
+      
      gameState.update();
-     setTimeout('globalGame.run()', 2000 );
+     setTimeout('globalGame.run()', 500 );
   }
   
   this.drawPiece = function(context, piece, x, y)
@@ -400,15 +533,10 @@ function gameLoop()
   {
     console.log("Canvas discovered");
     var context = canvas.getContext('2d');
-    
-    // TODO:
-
-    
+       
     canvas.width = gameWidth * squareSize;
     canvas.height = gameHeight * squareSize;
-    
-    drawBackground(context);
-    
+       
     game = new Game(context);
     game.run();
     //var gameState = createInitialState();
@@ -428,11 +556,19 @@ function gameLoop()
 function drawBackground(context)
 {
   
-  context.fillStyle = '#dfdfff';
   for(var y=0; y<gameHeight; y++)
   {
-  for(var x=(y%2) ? 1 : 0; x<gameWidth; x+=2)
+    //for(var x=(y%2) ? 1 : 0; x<gameWidth; x+=2)
+    for(var x=0; x<gameWidth; x++)
     {
+      if((x+y)%2)
+      {
+        context.fillStyle = '#dfdfff';
+      }
+      else
+      {
+        context.fillStyle = '#ffffff';
+      }
       context.fillRect(x*squareSize, y*squareSize, squareSize, squareSize);  
     }   
   }
