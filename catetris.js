@@ -111,11 +111,14 @@ function FallingPiece(type, position)
        
     for(var i=0; i<this.rotation; i++)
     {
-      var x = 2-piecePositions[i].y; // incorrect
-      var y = piecePositions[i].x;
+      for(n=0; n<piecePositions.length; n++)
+      {
+        var x = 3-piecePositions[n].y; // incorrect
+        var y = piecePositions[n].x;
       
-      piecePositions[i].x=x;
-      piecePositions[i].y=y;
+        piecePositions[n].x=x;
+        piecePositions[n].y=y;
+      }
     }
     return piecePositions;
   }
@@ -247,20 +250,51 @@ function GameState(widthIn, heightIn)
   
   this.nudgeLeft = function()
   {
-    this.nudgeX(-1);
+    this.nudge(-1, 0);
   }
   
-  this.nudgeX=function(x)
+  this.nudgeRight = function()
+  {
+    this.nudge(1, 0);
+  }
+  
+  this.nudgeDown = function()
+  {
+    this.nudge(0, 1);
+  }
+  
+  this.rotateClockwise = function()
   {
     if(!fallingPiece)
     {
       return;
     }
+    fallingPiece.rotation++;
+    var fallingPiecePositions = fallingPiece.getPiecePositions();
+    if(this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y))
+    {
+      fallingPiece.rotation--;
+    }
+  }
+  
+  this.nudge=function(x, y)
+  {
+    if(x!=0 && y!=0)
+    {
+      console.log("illegal nudge");
+    }
+    
+    if(!fallingPiece)
+    {
+      return;
+    }
     fallingPiece.position.x+=x;
+    fallingPiece.position.y+=y;
     var fallingPiecePositions = fallingPiece.getPiecePositions();
     if(this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y))
     {
       fallingPiece.position.x-=x;
+      fallingPiece.position.y-=y;
     }
   }
 };
@@ -280,10 +314,37 @@ function Game(context)
   //document.addEventListener('keydown', globalGame.keyEvent, true);
   document.addEventListener('keydown', function(event)
   {
-    if(event.keyCode == 65)
+  
+    switch(event.keyCode)
     {
-      gameState.nudgeLeft();
+      case 65:
+      {
+        gameState.nudgeLeft();
+        globalGame.drawBoard();
+        break;
+      }
+      case 68:
+      {
+        gameState.nudgeRight();
+        globalGame.drawBoard();
+        break;
+      }
+      case 87:
+      {
+        gameState.rotateClockwise();
+        globalGame.drawBoard();
+        break;
+      }
+      case 83:
+      {
+        // Should nudging downwards reset the time till the next update?
+        gameState.nudgeDown();
+        globalGame.drawBoard();
+        break;
+      }
     }
+      
+    
   });
   
   
@@ -319,6 +380,14 @@ function Game(context)
     
   this.run = function()
   {
+
+     this.drawBoard();
+     gameState.update();
+     setTimeout('globalGame.run()', 500 );
+  }
+  
+  this.drawBoard = function()
+  {
       drawBackground(context);
               
       // Draw the game board:
@@ -337,20 +406,16 @@ function Game(context)
       }
       
       var fallingPiece = gameState.getFallingPiece();
-      
-      
+        
       if(fallingPiece)
       {
         // Why a 2D buffer? Why not a list of the coordinates instead?
         var fallingBuffer=fallingPiece.getBuffer();
         var gridSize=fallingPiece.getGridSize();
-        //for(var y=fallingPiece.position.y; y<fallingPiece.position.y+gridSize; y++)
         for(var y=0; y<gridSize; y++)
         {
           for(var x=0; x<gridSize; x++)
-          //for(var x=fallingPiece.position.x; x<fallingPiece.position.x+gridSize; x++)
           {
-            // console.log("drawingFalling at X: "+fallingPiece.position.x+" Y: "+fallingPiece.position.y);
             var piece=fallingBuffer[to1D(x, y, gridSize)];
             if(piece)
             {
@@ -359,9 +424,6 @@ function Game(context)
           }
         }
       }
-      
-     gameState.update();
-     setTimeout('globalGame.run()', 500 );
   }
   
   this.drawPiece = function(context, piece, x, y)
