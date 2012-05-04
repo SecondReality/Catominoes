@@ -113,7 +113,7 @@ function FallingPiece(type, position)
     {
       for(n=0; n<piecePositions.length; n++)
       {
-        var x = 3-piecePositions[n].y; // incorrect
+        var x = (gridSize-1)-piecePositions[n].y; // incorrect
         var y = piecePositions[n].x;
       
         piecePositions[n].x=x;
@@ -155,8 +155,8 @@ function GameState(widthIn, heightIn)
       console.log("no falling piece");
       fallingPiece = new FallingPiece(nextPiece, vector(5, 0));   
       
-      // TODO: Generate random number:
-      nextPiece = 0;
+      // Generate random number between 0 and 2:
+      nextPiece = Math.floor(Math.random()*3);
     }
     else
     {
@@ -305,7 +305,7 @@ var globalGame = null;
 // Handles tying input to game state and rendering:
 function Game(context)
 {     
-  var tetronimoI = makeSprite("I.png");
+  var tetronimoI = makeSprite("sprites.png");
   var context = context;
   var gameState = new GameState(gameWidth, gameHeight);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
@@ -471,66 +471,7 @@ function getTetronimoPieceGridSize(type)
   }
 }
 
-// Returns the graphical source coordinates of the pieces in this tetronimo.
-// [Vector]
-// Results are logical coordinates, 
 
-function getGraphicalTetronimoSourcePiecePositions(type)
-{
-  switch(type)
-  {
-    case 0:
-    {
-      return [vector(0, 0), vector(1, 0), vector(2, 0), vector(3, 0)];
-    }
-  }
-}
-
-function getTetronimoPositions(type)
-{ 
-  switch(type)
-  {
-    case 0:
-    {
-      return [vector(0, 1), vector(1, 1), vector(2, 1), vector(3, 1)];
-    }
-  }
-}
-
-function getTetronimoGridSize(type)
-{ 
-  switch(type)
-  {
-    case 0:
-    {
-      return 4;
-    }
-  }
-}
-
-// Converts the source coordinates into pixel positions.
-// [[x1, y1] [x2, y2]]
-// EDIT: Updated:
-// returns Vector
-/*
-function getGraphicalTetronimoSourcePiecePixelPosition(type, point)
-{
- var upperLeft = point.multiply(squareSize);
- return upperLeft;
-}
-*/
-
-// getGraphicalTetronimoSourcePiecePositions does not return pixels positions nor account for the fact that some pieces slightly overlap their boundary.
-// [[x1, y1, x2, y2]]
-function getGraphicalTetronimoSourcePiecePixelPositions(type)
-{
-  result = []
-  positions = getGraphicalTetronimoSourcePiecePositions(type);
-}
-
-function drawPiece()
-{
-}
 
 function unitTest()
 {
