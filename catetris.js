@@ -7,6 +7,11 @@ edgeOverlap = 6; // The graphical size of the tiles (tiles slightly overlap)
 
 window.onload = draw;  
 
+function log(message)
+{
+  console.log(message);
+}
+
 // Converts a 2d position to a 1d position, used for accessing a 1D array with 2D coordinates.
 function to1D(x, y, gridWidth)
 {
@@ -20,14 +25,10 @@ function FallingPiece(type, position)
   this.type = type;
   this.set = 0;
   var gridSize =   getTetronimoGridSize(this.type);
+  
   // Returns a 2d buffer containing the index to the type.
   this.getBuffer = function()
-  {
-    // TODO:
-    // We should precompute all the falling pieces beforehand - 
-    // all rotations of all pieces will easily fit in memory.
-
-    
+  {   
     var piecePositions = this.getPiecePositions();
     
     // Now generate the buffer:
@@ -85,11 +86,11 @@ function GameState(widthIn, heightIn)
   var boardState = nullArray(width * height);
   var fallingPiece = null;
   
-  this.update = function(soundListener)
+  // Returns the piece if one has been deposited
+  this.update = function()
   {
     if(!fallingPiece)
     {
-      console.log("no falling piece");
       fallingPiece = new FallingPiece(nextPiece, vector(5, 0));   
       
       // Generate random number between 0 and 2:
@@ -103,7 +104,7 @@ function GameState(widthIn, heightIn)
       if(this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y))
       {
         fallingPiece.position.y--;
-        
+                
         // Add the falling piece to the board at its previous height:
         for(var i=0; i<fallingPiecePositions.length; i++)
         {
@@ -112,65 +113,76 @@ function GameState(widthIn, heightIn)
           boardState[index]=piece;
         }
         
-        soundListener.play();
-        
-        // Get the minimum and maximum y values of the newly added blocks.
-        // TODO: this could also be precalculated:
-        var minY=fallingPiecePositions[0].y;
-        var maxY=fallingPiecePositions[0].y;
-        for(var i=1; i<fallingPiecePositions.length; i++)
-        {
-          if(fallingPiecePositions[i].y < minY)
-          {
-            minY = fallingPiecePositions[i].y;
-          }
-          if(fallingPiecePositions[i].y > maxY)
-          {
-            maxY = fallingPiecePositions[i].y;
-          }
-        }
-        
-        var completedRows = [];
-        // Check if these rows should be removed (or start flashing):
-        for(var y=minY+fallingPiece.position.y; y<=maxY+fallingPiece.position.y; y++)
-        {
-          console.log("Checking row: "+y);
-          var rowComplete = true;
-          for(x=0; x<width; x++)
-          {
-            var index=to1D(x, y, width);
-            if(boardState[index]===null)
-            {
-              rowComplete=false;
-              break;
-            }
-          }
-          
-          if(rowComplete)
-          {
-            completedRows.push(y);
-          }
-          
-        }
-        
-        // Remove the completed rows:
-        for(var row=0; row<completedRows.length; row++)
-        {
-          for(y=completedRows[row]; y>=0; y--)
-          {
-            for(x=0; x<width; x++)
-            {
-              var readIndex=to1D(x, y-1, width);
-              var writeIndex=to1D(x, y, width);
-              boardState[writeIndex]=boardState[readIndex];
-            }
-          }
-        }
-        
-        fallingPiece = null;       
+        var depositedPiece=fallingPiece;
+        fallingPiece = null;
+        return depositedPiece;  
       }     
     }
   };
+  
+  // Returns a list of lines that were completed
+  // The rows are returned in order of their Y-value
+  // FallingPiece -> [ Integer ]
+  this.checkRowCompletion = function(fallingPiece)
+  {
+    var fallingPiecePositions = fallingPiece.getPiecePositions();
+    
+   // Get the minimum and maximum y values of the newly added blocks.
+    // TODO: this could also be precalculated:
+    var minY=fallingPiecePositions[0].y;
+    var maxY=fallingPiecePositions[0].y;
+    for(var i=1; i<fallingPiecePositions.length; i++)
+    {
+      if(fallingPiecePositions[i].y < minY)
+      {
+        minY = fallingPiecePositions[i].y;
+      }
+      if(fallingPiecePositions[i].y > maxY)
+      {
+        maxY = fallingPiecePositions[i].y;
+      }
+    }
+    
+    var completedRows = [];
+    
+    for(var y=minY+fallingPiece.position.y; y<=maxY+fallingPiece.position.y; y++)
+    {
+      console.log("Checking row: "+y);
+      var rowComplete = true;
+      for(x=0; x<width; x++)
+      {
+        var index=to1D(x, y, width);
+        if(boardState[index]===null)
+        {
+          rowComplete=false;
+          break;
+        }
+      }
+      
+      if(rowComplete)
+      {
+        completedRows.push(y);
+      }
+    }
+    return completedRows;
+  }
+
+  // Removes the given rows, and drops down the pieces above  
+  this.removeRowsAndDropDown = function(rows)
+  {
+    for(var row=0; row<rows.length; row++)
+    {
+      for(y=rows[row]; y>=0; y--)
+      {
+        for(x=0; x<width; x++)
+        {
+          var readIndex=to1D(x, y-1, width);
+          var writeIndex=to1D(x, y, width);
+          boardState[writeIndex]=boardState[readIndex];
+        }
+      }
+    }
+  }
   
   this.getFallingPiece = function()
   {
@@ -366,21 +378,53 @@ function Game(context)
    
   this.run = function()
   {
-
      this.drawBoard();
-     gameState.update(depositBlockSound);
-     setTimeout('globalGame.run()', 500 );
+     var depositedBlock = gameState.update();
+     if(depositedBlock)
+     {
+       depositBlockSound.play();
+       var completedRows=gameState.checkRowCompletion(depositedBlock);
+       if(completedRows.length>0)
+       {
+         // Rows have been completed, flash the rows:
+         setTimeout(globalGame.flashRows.bind(globalGame), 200, 5, completedRows);
+       }
+     }
+     setTimeout(globalGame.run.bind(globalGame), 500);
   };
   
-  this.drawBoard = function()
+  this.flashRows = function(remainingFlashes, flashingRows)
+  {   
+    if(remainingFlashes===0)
+    {
+      gameState.removeRowsAndDropDown(flashingRows);
+      this.run();
+      return;
+    }
+
+    this.drawBoard(flashingRows);
+    remainingFlashes--;
+    setTimeout(globalGame.flashRows.bind(globalGame), 200, remainingFlashes, flashingRows);
+  }
+  
+  // hiddenRows is an optional parameter
+  this.drawBoard = function(hiddenRows)
   {
       drawBackground(context);
               
       // Draw the game board:
       var state = gameState.getGraphicalState();
+      
+      var rowIndex = 0;
          
       for(var y = 0; y < gameState.getHeight(); y++)
       {
+        if(hiddenRows && rowIndex<hiddenRows.length && y===hiddenRows[rowIndex])
+        {
+          rowIndex++;
+          continue;
+        }
+        
         for(var x = 0; x < gameState.getWidth(); x++)
         {
           var p = gameState.getPiece(x, y);
@@ -450,10 +494,7 @@ function unitTest()
   
   console.log("getGraphicalTetronimoSourcePiecePositions");
   console.log(getGraphicalTetronimoSourcePiecePositions(0));
-  
-  //console.log("getGraphicalTetronimoSourcePiecePixelPosition(0, vector(0, 0))");
-  //console.log(getGraphicalTetronimoSourcePiecePixelPosition(0, vector(0, 0)));
-  
+   
   var gameState = new GameState(4, 5);
   gameState.setPiece(1, 1, "Hello");
  
@@ -488,7 +529,6 @@ function gameLoop()
 
 function drawBackground(context)
 {
-  
   for(var y=0; y<gameHeight; y++)
   {
     //for(var x=(y%2) ? 1 : 0; x<gameWidth; x+=2)
