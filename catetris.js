@@ -18,13 +18,28 @@ function to1D(x, y, gridWidth)
   return y*gridWidth+x;
 }
 
+function rotateVectorArrayClockwise(array, gridSize, rotations)
+{
+  for(var i=0; i<rotations; i++)
+  {
+    for(n=0; n<array.length; n++)
+    {
+      var x = (gridSize-1)-array[n].y;
+      var y = array[n].x;
+    
+      array[n].x=x;
+      array[n].y=y;
+    }
+  }
+}
+
 function FallingPiece(type, position)
 {
   this.position = position;
   this.rotation = 0;
   this.type = type;
   this.set = 0;
-  var gridSize =   getTetronimoGridSize(this.type);
+  var gridSize = getTetronimoGridSize(this.type);
   
   // Returns a 2d buffer containing the index to the type.
   this.getBuffer = function()
@@ -46,18 +61,7 @@ function FallingPiece(type, position)
   this.getPiecePositions = function()
   {
     var piecePositions = getTetronimoPositions(this.type);
-       
-    for(var i=0; i<this.rotation; i++)
-    {
-      for(n=0; n<piecePositions.length; n++)
-      {
-        var x = (gridSize-1)-piecePositions[n].y;
-        var y = piecePositions[n].x;
-      
-        piecePositions[n].x=x;
-        piecePositions[n].y=y;
-      }
-    }
+    rotateVectorArrayClockwise(piecePositions, gridSize, this.rotation);    
     return piecePositions;
   };
   
@@ -295,6 +299,16 @@ function GameState(widthIn, heightIn)
 
 var globalGame = null;
 
+// Returns true if point is contained in a grid of the given dimensions
+function inGrid(width, height, point)
+{
+  if(point.x >=0 && point.x<width && point.y >=0 && point.y < height)
+  {
+    return true;
+  }
+  return false;
+}
+
 // Handles tying input to game state and rendering:
 function Game(context)
 {     
@@ -435,6 +449,41 @@ function Game(context)
           if(p)
           {
             this.drawPiece(context, p, x, y);
+                                     
+            // Draw the blood.
+            // Get a list of the connectivity pieces and rotate them to match the rotation of this piece:
+            var relativeAdjacent = getAdjacent(p.type, p.index);
+            rotateVectorArrayClockwise(relativeAdjacent, 1, p.rotation);
+            
+            for(var i=0; i<relativeAdjacent.length; i++)
+            {
+             // Check if the piece is still connected, if not - then draw slime:
+             var checkPosition=vector(x+relativeAdjacent[i].x, y+relativeAdjacent[i].y);
+                          
+             if(!inGrid(gameState.getWidth(), gameState.getHeight(), checkPosition))
+             {
+               continue;
+             }
+             
+             var checkPiece=state[to1D(checkPosition.x, checkPosition.y, gameState.getWidth())];
+             
+             if(checkPiece.type != p.type || p.index != relativeAdjacent[i].index)
+             {
+               continue;
+             }
+                          
+              var rotation=0;
+              if(Math.abs(relativeAdjacent[i].x)==1)
+              {
+                rotation = relativeAdjacent[i].x==1 ? 1 : 3;
+              }
+              else
+              {
+                rotation = relativeAdjacent[i].y==-1 ? 0: 2;
+              }
+              this.drawSlime(context, checkPosition.x, checkPosition.y, rotation)
+            }
+              
           }
         }
       }
@@ -446,6 +495,7 @@ function Game(context)
         // Why a 2D buffer? Why not a list of the coordinates instead?
         var fallingBuffer=fallingPiece.getBuffer();
         var gridSize=fallingPiece.getGridSize();
+        
         for(var y=0; y<gridSize; y++)
         {
           for(var x=0; x<gridSize; x++)
@@ -453,11 +503,7 @@ function Game(context)
             var piece=fallingBuffer[to1D(x, y, gridSize)];
             if(piece)
             {
-              this.drawPiece(context, piece, fallingPiece.position.x+x, fallingPiece.position.y+y);
-              
-              // Draw the blood.
-              // Get a list of the connectivity pieces and rotate them to match the rotation of this piece:
-              
+              this.drawPiece(context, piece, fallingPiece.position.x+x, fallingPiece.position.y+y);              
             }
           }
         }
@@ -476,6 +522,24 @@ function Game(context)
 
     context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
     context.rotate( piece.rotation * (Math.PI/2.0));
+
+    context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
+
+    context.restore();
+  };
+  
+  this.drawSlime = function(context, x, y, rotation)
+  {
+    context.save();
+                
+    // Get the piece positions for this type:
+    var piecePositions = [];//getGraphicalTetronimoSourcePiecePositions(piece.type);
+
+    // Translate the piece position into a source image coordinate:
+    var sourcePosition = vector(0, 20).multiply(squareSize);                          
+
+    context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
+    context.rotate( rotation * (Math.PI/2.0));
 
     context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
 
