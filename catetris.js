@@ -7,23 +7,6 @@ edgeOverlap = 6; // The graphical size of the tiles (tiles slightly overlap)
 
 window.onload = draw;  
 
-// Terminology:
-// Piece fragments represent 
-
-// 0: Cyan I
-// ****
-// 1: Yellow O
-// **
-// **
-// 2: Purple T
-//  * 
-// ***
-// Green S
-// Red Z
-// Blue J
-// Orange L
-
-// Vector class
 Vector = function(x, y)
 {
   this.x = x;
@@ -39,18 +22,17 @@ function makeSprite(source)
 
 Vector.prototype.add = function(v2)
 {
-	return new Vector(this.x + v2.x, this.y + v2.y);
+  return new Vector(this.x + v2.x, this.y + v2.y);
 };
 
 Vector.prototype.subtract = function(v2)
 {
-	return new Vector(this.x - v2.x, this.y - v2.y);
+  return new Vector(this.x - v2.x, this.y - v2.y);
 };
 
 Vector.prototype.multiply = function(n)
 {
-
-	return new Vector(this.x * n, this.y * n);
+  return new Vector(this.x * n, this.y * n);
 };
 
 function vector(x, y)
@@ -219,9 +201,7 @@ function GameState(widthIn, heightIn)
         }
         
         fallingPiece = null;       
-      }
-      
-      
+      }     
     }
   }
   
@@ -257,15 +237,7 @@ function GameState(widthIn, heightIn)
   {
     return boardState;
   }
-  
-  /*
-  this.checkFallingPieceCollisions = function()
-  {
-    var fallingPiecePositions = fallingPiece.getPiecePositions();
-    return (this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y));
-  }
-  */
-  
+    
   // Checks if the given positionList collides with another block in boardGrid,
   // or if a position in positionList is off-grid.
   this.checkCollision = function(boardGrid, positionList, offsetX, offsetY)
@@ -354,7 +326,8 @@ function Game(context)
   var gameState = new GameState(gameWidth, gameHeight);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
-  // Start listening for keyboard input:
+  
+  // Listen for keyboard input:
   document.addEventListener('keydown', function(event)
   {
   
@@ -478,7 +451,6 @@ function Game(context)
     var piecePositions = getGraphicalTetronimoSourcePiecePositions(piece.type);
 
     // Translate the piece position into a source image coordinate:
-
     var sourcePosition = piecePositions[piece.index].multiply(squareSize);                          
 
     context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
@@ -517,13 +489,6 @@ function unitTest()
   gameState.setPiece(1, 1, "Hello");
  
   console.log("----- Unit tests complete -----");
-}
-
-// Returns how many sqares are in the archtypal Tetrominos.
-// The input corresponds to pieceFragment.type
-function getTetronimoPieceCount(type)
-{
-  return 4;
 }
 
 function draw()
