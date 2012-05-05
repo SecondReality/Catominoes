@@ -7,39 +7,6 @@ edgeOverlap = 6; // The graphical size of the tiles (tiles slightly overlap)
 
 window.onload = draw;  
 
-Vector = function(x, y)
-{
-  this.x = x;
-  this.y = y;
-};
-
-function makeSprite(source)
-{
-  var image = new Image();
-  image.src = source;
-  return image;
-}
-
-Vector.prototype.add = function(v2)
-{
-  return new Vector(this.x + v2.x, this.y + v2.y);
-};
-
-Vector.prototype.subtract = function(v2)
-{
-  return new Vector(this.x - v2.x, this.y - v2.y);
-};
-
-Vector.prototype.multiply = function(n)
-{
-  return new Vector(this.x * n, this.y * n);
-};
-
-function vector(x, y)
-{
-  return new Vector(x, y);
-}
-
 // Converts a 2d position to a 1d position, used for accessing a 1D array with 2D coordinates.
 function to1D(x, y, gridWidth)
 {
@@ -83,7 +50,7 @@ function FallingPiece(type, position)
     {
       for(n=0; n<piecePositions.length; n++)
       {
-        var x = (gridSize-1)-piecePositions[n].y; // incorrect
+        var x = (gridSize-1)-piecePositions[n].y;
         var y = piecePositions[n].x;
       
         piecePositions[n].x=x;
@@ -91,12 +58,12 @@ function FallingPiece(type, position)
       }
     }
     return piecePositions;
-  }
+  };
   
   this.getGridSize = function()
   {
     return gridSize;
-  }
+  };
 }
 
 function nullArray(size)
@@ -115,7 +82,7 @@ function GameState(widthIn, heightIn)
   var width = widthIn;
   var height = heightIn;
   var nextPiece = 0;
-  
+  var boardState = nullArray(width * height);
   var fallingPiece = null;
   
   this.update = function(soundListener)
@@ -172,7 +139,7 @@ function GameState(widthIn, heightIn)
           for(x=0; x<width; x++)
           {
             var index=to1D(x, y, width);
-            if(boardState[index]==null)
+            if(boardState[index]===null)
             {
               rowComplete=false;
               break;
@@ -203,40 +170,37 @@ function GameState(widthIn, heightIn)
         fallingPiece = null;       
       }     
     }
-  }
+  };
   
   this.getFallingPiece = function()
   {
     return fallingPiece;
-  }
+  };
   
   this.getWidth = function()
   {
     return width;
-  }
+  };
   
   this.getHeight = function()
   {
     return height;
-  }
-  
-  var boardState = nullArray(width * height);//new Array(width * height);
-  var fallingPiece = null;
-   
+  };
+    
   this.getPiece = function(x, y)
   {
     return boardState[y*gameWidth+x];
-  }
+  };
 
   this.setPiece = function(x, y, piece)
   {
     boardState[y*gameWidth+x] = piece;
-  }
+  };
   
   this.getGraphicalState = function()
   {
     return boardState;
-  }
+  };
     
   // Checks if the given positionList collides with another block in boardGrid,
   // or if a position in positionList is off-grid.
@@ -254,29 +218,29 @@ function GameState(widthIn, heightIn)
       }
       
       var index = to1D(positionList[i].x+offsetX, positionList[i].y+offsetY, width);
-      if(boardGrid[index]!=null)
+      if(boardGrid[index]!==null)
       {
         console.log("collision detected");
         return true;
       }
     }
     return false;
-  }
+  };
   
   this.nudgeLeft = function()
   {
     this.nudge(-1, 0);
-  }
+  };
   
   this.nudgeRight = function()
   {
     this.nudge(1, 0);
-  }
+  };
   
   this.nudgeDown = function()
   {
     this.nudge(0, 1);
-  }
+  };
   
   this.rotateClockwise = function()
   {
@@ -290,11 +254,12 @@ function GameState(widthIn, heightIn)
     {
       fallingPiece.rotation--;
     }
-  }
+  };
   
   this.nudge=function(x, y)
   {
-    if(x!=0 && y!=0)
+    // This should really be a debug assert
+    if(x!==0 && y!==0)
     {
       console.log("illegal nudge");
     }
@@ -311,8 +276,9 @@ function GameState(widthIn, heightIn)
       fallingPiece.position.x-=x;
       fallingPiece.position.y-=y;
     }
-  }
-};
+  };
+  
+}
 
 var globalGame = null;
 
@@ -322,7 +288,6 @@ function Game(context)
   var spriteSheet = makeSprite("sprites.png");
   var depositBlockSound = new Audio("depositBlock.wav");
   
-  var context = context;
   var gameState = new GameState(gameWidth, gameHeight);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
@@ -356,6 +321,10 @@ function Game(context)
         // Should nudging downwards reset the time till the next update?
         gameState.nudgeDown();
         globalGame.drawBoard();
+        break;
+      }
+      default:
+      {
         break;
       }
     }   
@@ -401,7 +370,7 @@ function Game(context)
      this.drawBoard();
      gameState.update(depositBlockSound);
      setTimeout('globalGame.run()', 500 );
-  }
+  };
   
   this.drawBoard = function()
   {
@@ -441,7 +410,7 @@ function Game(context)
           }
         }
       }
-  }
+  };
   
   this.drawPiece = function(context, piece, x, y)
   {
@@ -459,7 +428,7 @@ function Game(context)
     context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
 
     context.restore();
-  }
+  };
 }
 
 // Piece class
@@ -510,16 +479,11 @@ function gameLoop()
        
     game = new Game(context);
     game.run();
-    //var gameState = createInitialState();
-    //gameState.pieceFragments.push(createRandomTetronimo());
-    
-    // Create an I piece and add it to the board:
-    // var gameState = new GameState(gameWidth, gameHeight);
-    }
-    else
-    {
-      console.log("Canvas not found");
-    }
+  }
+  else
+  {
+    console.log("Canvas not found");
+  }
 }
 
 function drawBackground(context)
