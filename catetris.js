@@ -177,8 +177,9 @@ function GameState(widthIn, heightIn)
         for(x=0; x<width; x++)
         {
           var readIndex=to1D(x, y-1, width);
+          var readValue = readIndex >= 0 ? boardState[readIndex] : null;
           var writeIndex=to1D(x, y, width);
-          boardState[writeIndex]=boardState[readIndex];
+          boardState[writeIndex]=readValue;
         }
       }
     }
@@ -387,7 +388,8 @@ function Game(context)
        if(completedRows.length>0)
        {
          // Rows have been completed, flash the rows:
-         setTimeout(globalGame.flashRows.bind(globalGame), 200, 5, completedRows);
+         setTimeout(globalGame.flashRows.bind(globalGame), 200, 10, completedRows);
+         return;
        }
      }
      setTimeout(globalGame.run.bind(globalGame), 500);
@@ -402,7 +404,9 @@ function Game(context)
       return;
     }
 
-    this.drawBoard(flashingRows);
+    var parameter = remainingFlashes % 2 ==0 ? null : flashingRows;
+    this.drawBoard(parameter);
+    
     remainingFlashes--;
     setTimeout(globalGame.flashRows.bind(globalGame), 200, remainingFlashes, flashingRows);
   }
@@ -450,6 +454,10 @@ function Game(context)
             if(piece)
             {
               this.drawPiece(context, piece, fallingPiece.position.x+x, fallingPiece.position.y+y);
+              
+              // Draw the blood.
+              // Get a list of the connectivity pieces and rotate them to match the rotation of this piece:
+              
             }
           }
         }
