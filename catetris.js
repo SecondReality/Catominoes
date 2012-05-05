@@ -78,20 +78,8 @@ function FallingPiece(type, position)
     // We should precompute all the falling pieces beforehand - 
     // all rotations of all pieces will easily fit in memory.
 
-    // Get the unrotated collision buffer for this piece:
+    
     var piecePositions = this.getPiecePositions();
-    /*
-    getTetronimoPositions(this.type);
-       
-    for(var i=0; i<this.rotation; i++)
-    {
-      var x = 2-piecePositions[i].y; // incorrect
-      var y = piecePositions[i].x;
-      
-      piecePositions[i].x=x;
-      piecePositions[i].y=y;
-    }
-    */
     
     // Now generate the buffer:
     var buffer = nullArray(gridSize*gridSize);
@@ -148,7 +136,7 @@ function GameState(widthIn, heightIn)
   
   var fallingPiece = null;
   
-  this.update = function()
+  this.update = function(soundListener)
   {
     if(!fallingPiece)
     {
@@ -156,7 +144,7 @@ function GameState(widthIn, heightIn)
       fallingPiece = new FallingPiece(nextPiece, vector(5, 0));   
       
       // Generate random number between 0 and 2:
-      nextPiece = Math.floor(Math.random()*3);
+      nextPiece = Math.floor(Math.random()*7);
     }
     else
     {
@@ -170,11 +158,66 @@ function GameState(widthIn, heightIn)
         // Add the falling piece to the board at its previous height:
         for(var i=0; i<fallingPiecePositions.length; i++)
         {
-          
           var index = to1D(fallingPiecePositions[i].x+fallingPiece.position.x, fallingPiecePositions[i].y+fallingPiece.position.y, width);
           var piece=new Piece(fallingPiece.type, fallingPiece.set, fallingPiece.rotation, i); 
           boardState[index]=piece;
         }
+        
+        soundListener.play();
+        
+        // Get the minimum and maximum y values of the newly added blocks.
+        // TODO: this could also be precalculated:
+        var minY=fallingPiecePositions[0].y;
+        var maxY=fallingPiecePositions[0].y;
+        for(var i=1; i<fallingPiecePositions.length; i++)
+        {
+          if(fallingPiecePositions[i].y < minY)
+          {
+            minY = fallingPiecePositions[i].y;
+          }
+          if(fallingPiecePositions[i].y > maxY)
+          {
+            maxY = fallingPiecePositions[i].y;
+          }
+        }
+        
+        var completedRows = [];
+        // Check if these rows should be removed (or start flashing):
+        for(var y=minY+fallingPiece.position.y; y<=maxY+fallingPiece.position.y; y++)
+        {
+          console.log("Checking row: "+y);
+          var rowComplete = true;
+          for(x=0; x<width; x++)
+          {
+            var index=to1D(x, y, width);
+            if(boardState[index]==null)
+            {
+              rowComplete=false;
+              break;
+            }
+          }
+          
+          if(rowComplete)
+          {
+            completedRows.push(y);
+          }
+          
+        }
+        
+        // Remove the completed rows:
+        for(var row=0; row<completedRows.length; row++)
+        {
+          for(y=completedRows[row]; y>=0; y--)
+          {
+            for(x=0; x<width; x++)
+            {
+              var readIndex=to1D(x, y-1, width);
+              var writeIndex=to1D(x, y, width);
+              boardState[writeIndex]=boardState[readIndex];
+            }
+          }
+        }
+        
         fallingPiece = null;       
       }
       
@@ -301,17 +344,17 @@ function GameState(widthIn, heightIn)
 
 var globalGame = null;
 
-
 // Handles tying input to game state and rendering:
 function Game(context)
 {     
-  var tetronimoI = makeSprite("sprites.png");
+  var spriteSheet = makeSprite("sprites.png");
+  var depositBlockSound = new Audio("depositBlock.wav");
+  
   var context = context;
   var gameState = new GameState(gameWidth, gameHeight);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
   // Start listening for keyboard input:
-  //document.addEventListener('keydown', globalGame.keyEvent, true);
   document.addEventListener('keydown', function(event)
   {
   
@@ -342,47 +385,48 @@ function Game(context)
         globalGame.drawBoard();
         break;
       }
-    }
-      
-    
+    }   
   });
   
-  
-  // Test initialisation
+  // Touch controls:
+  var obj = document.getElementById('gameCanvas');
+  obj.addEventListener('touchstart', function(event)
   {
-  /*
-  var piece = new Piece(0, 0, 2, 0);
-  gameState.setPiece(3, 19, piece);
-        
-    var v1 = new Piece(0, 0, 1, 0);
-    var v2 = new Piece(0, 0, 1, 1);
-    var v3 = new Piece(0, 0, 1, 2);
-    var v4 = new Piece(0, 0, 1, 3);
-        
-    gameState.setPiece(2, 15, v1);
-    gameState.setPiece(2, 16, v2);
-    gameState.setPiece(2, 17, v3);
-    gameState.setPiece(2, 18, v4);
-    
-    {
-      var v1 = new Piece(0, 0, 0, 0);
-      var v2 = new Piece(0, 0, 0, 1);
-      var v3 = new Piece(0, 0, 0, 2);
-      var v4 = new Piece(0, 0, 0, 3);
-          
-      gameState.setPiece(3, 15, v1);
-      gameState.setPiece(4, 15, v2);
-      gameState.setPiece(5, 15, v3);
-      gameState.setPiece(6, 15, v4);
+    // If there's exactly one finger inside this element
+    if (event.targetTouches.length == 1) {
+      var touch = event.targetTouches[0];
+      
+      
+      if(touch.pageY < (gameState.getFallingPiece().position.y *squareSize) - 100)
+      {
+        gameState.rotateClockwise();
+        globalGame.drawBoard();
+      }
+      
+      if(touch.pageY > (gameState.getFallingPiece().position.y *squareSize)+100)
+      {
+        gameState.nudgeDown();
+        globalGame.drawBoard();
+      }
+      
+      if(touch.pageX < (gameState.getFallingPiece().position.x *squareSize))
+      {
+        gameState.nudgeLeft();
+        globalGame.drawBoard();
+      }
+      else
+      {
+        gameState.nudgeRight();
+        globalGame.drawBoard();
+      }
     }
-    */
-  }
-    
+  }, false);
+   
   this.run = function()
   {
 
      this.drawBoard();
-     gameState.update();
+     gameState.update(depositBlockSound);
      setTimeout('globalGame.run()', 500 );
   }
   
@@ -440,15 +484,10 @@ function Game(context)
     context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
     context.rotate( piece.rotation * (Math.PI/2.0));
 
-    context.drawImage(tetronimoI, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
+    context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
 
     context.restore();
   }
-}
-
-// The piece is placed relative to its top left.
-GameState.prototype.placeTetronimo = function(type, set, position)
-{
 }
 
 // Piece class
@@ -459,19 +498,6 @@ function Piece(type, set, rotation, index)
   this.rotation = rotation;
   this.index = index;
 }
-
-function getTetronimoPieceGridSize(type)
-{
-  switch(type)
-  {
-    case 0:
-    {
-      return 4;
-    }
-  }
-}
-
-
 
 function unitTest()
 {
@@ -498,29 +524,6 @@ function unitTest()
 function getTetronimoPieceCount(type)
 {
   return 4;
-}
-
-/*
-function createRandomTetronimo()
-{
-  pieceFragment = new Object();
-  pieceFragment.type = 0;
-  pieceFragment.graphicalSet = 0;
-  pieceFragment.rotation = 0;
-  pieceFragment.fragments = [1,1,1,1]; // should use getTetronimoPieceCount
-  return pieceFragment;
-}
-*/
-
-
-// Generate a collision map.
-function generateCollisionMap(type)
-{
-
-}
-
-function placeRandomTetronimo()
-{
 }
 
 function draw()
@@ -552,8 +555,6 @@ function gameLoop()
     {
       console.log("Canvas not found");
     }
-    
-
 }
 
 function drawBackground(context)
