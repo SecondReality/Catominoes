@@ -17,6 +17,7 @@ function getGraphicalTetronimoSourcePiecePositions(type)
   var offset = getGraphicalTetronimoSourcePieceOffset(type);
   
   var positions = getTetronimoPositions(type);
+  
   for(var i=0; i<positions.length; i++)
   {
     positions[i]=positions[i].add(offset);
