@@ -19,6 +19,22 @@ function getGraphicalTetronimoSourcePieceOffset(type)
     {
       return vector(0, 5);
     }
+    case 3:
+    {
+      return vector(0, 8);
+    }
+    case 4:
+    {
+      return vector(0, 11);
+    }
+    case 5:
+    {
+      return vector(0, 14);
+    }
+    case 6:
+    {
+      return vector(0, 17);
+    }
   }
 }
 
@@ -53,8 +69,19 @@ function getTetronimoPositions(type)
     }
     case 3:
     {
-      return [vector(0, 0), vector(1, 0), vector(1, 0), vector(1, 1)];
-      //return [vector(1, 0), vector(2, 0), vector(0, 1), vector(1, 1)];
+      return [vector(0, 0), vector(0, 1), vector(1, 0), vector(1, 1)]; 
+    }
+    case 4:
+    {
+      return [vector(1, 0), vector(2, 0), vector(0, 1), vector(1, 1)];
+    }
+    case 5:
+    {
+      return [vector(1, 0), vector(0, 1), vector(1, 1), vector(2, 1)];
+    }
+    case 6:
+    {
+      return [vector(0, 0), vector(1, 0), vector(1, 1), vector(2, 1)];
     }
   }
 }
