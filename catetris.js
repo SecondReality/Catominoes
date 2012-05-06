@@ -11,6 +11,9 @@ canvasHeight = (gameHeight-offscreen) * squareSize+2*edgeOverlap;
     
 window.onload = draw;  
 
+// Terminology:
+// rotation: rotation is specified with values 0-3 (0 being 0 degrees, 1 being 90 degrees and so on)
+
 function log(message)
 {
   console.log(message);
@@ -263,6 +266,11 @@ function GameState(widthIn, heightIn, level)
     return fallingPiece;
   };
   
+  this.getNextPiece = function()
+  {
+    return nextPiece;
+  };
+  
   this.getWidth = function()
   {
     return width;
@@ -335,17 +343,17 @@ function GameState(widthIn, heightIn, level)
   
   this.nudgeLeft = function()
   {
-    this.nudge(-1, 0);
+    return this.nudge(-1, 0);
   };
   
   this.nudgeRight = function()
   {
-    this.nudge(1, 0);
+    return this.nudge(1, 0);
   };
   
   this.nudgeDown = function()
   {
-    this.nudge(0, 1);
+    return this.nudge(0, 1);
   };
   
   this.rotateClockwise = function()
@@ -359,7 +367,9 @@ function GameState(widthIn, heightIn, level)
     if(this.checkCollision(boardState, fallingPiecePositions, fallingPiece.position.x, fallingPiece.position.y))
     {
       fallingPiece.rotation--;
+      return;
     }
+    return true;
   };
   
   this.nudge=function(x, y)
@@ -381,9 +391,10 @@ function GameState(widthIn, heightIn, level)
     {
       fallingPiece.position.x-=x;
       fallingPiece.position.y-=y;
+      return;
     }
+    return true;
   };
-  
 }
 
 var globalGame = null;
@@ -425,26 +436,34 @@ function Game(context, nextPieceContext, level)
     {
       case 65:
       {
-        gameState.nudgeLeft();
-        globalGame.drawBoard();
+        if(gameState.nudgeLeft())
+        {
+          globalGame.drawBoard();
+        }
         break;
       }
       case 68:
       {
-        gameState.nudgeRight();
-        globalGame.drawBoard();
+        if(gameState.nudgeRight())
+        {
+          globalGame.drawBoard();
+        }
         break;
       }
       case 87:
       {
-        gameState.rotateClockwise();
-        globalGame.drawBoard();
+        if(gameState.rotateClockwise())
+        {
+          globalGame.drawBoard();
+        }
         break;
       }
       case 83:
       {
-        gameState.nudgeDown();
-        globalGame.drawBoard();
+        if(gameState.nudgeDown())
+        {
+          globalGame.drawBoard();
+        }
         break;
       }
       default:
@@ -547,8 +566,30 @@ function Game(context, nextPieceContext, level)
   
   this.drawNextPiece = function()
   {
-    nextPieceContext
+    // Clear the drawing area:
+    nextPieceContext.fillStyle = '#dfdfff';
+    nextPieceContext.fillRect(-edgeOverlap, -edgeOverlap, canvasWidth, canvasHeight);
+  
+    var nextPiece=new FallingPiece(gameState.getNextPiece(), vector(0, 0));
+    this.drawFallingPiece(nextPieceContext, nextPiece);
   }
+  
+  this.drawFallingPiece = function(context, fallingPiece)
+  {
+    if(fallingPiece)
+    {
+      var piecePositions=fallingPiece.getPiecePositions();
+      var gridSize=fallingPiece.getGridSize();
+      
+      for(var i=0; i<piecePositions.length; i++)
+      {
+        var piecePosition=piecePositions[i];
+        var piece=new Piece(fallingPiece.type, fallingPiece.set, fallingPiece.rotation, i); 
+        this.drawPiece(context, piece, fallingPiece.position.x+piecePosition.x, fallingPiece.position.y+piecePosition.y);
+      }
+    }
+  }
+  
   
   // hiddenRows is an optional parameter
   this.drawBoard = function(hiddenRows)
@@ -559,19 +600,7 @@ function Game(context, nextPieceContext, level)
       this.drawNextPiece();
               
       var fallingPiece = gameState.getFallingPiece();
-        
-      if(fallingPiece)
-      {
-        var piecePositions=fallingPiece.getPiecePositions();
-        var gridSize=fallingPiece.getGridSize();
-        
-        for(var i=0; i<piecePositions.length; i++)
-        {
-          var piecePosition=piecePositions[i];
-          var piece=new Piece(fallingPiece.type, fallingPiece.set, fallingPiece.rotation, i); 
-          this.drawPiece(context, piece, fallingPiece.position.x+piecePosition.x, fallingPiece.position.y+piecePosition.y);
-        }
-      }
+      this.drawFallingPiece(context, fallingPiece);
       
       var state = gameState.getGraphicalState();
       
@@ -640,40 +669,34 @@ function Game(context, nextPieceContext, level)
       }
 };
   
-  this.drawPiece = function(context, piece, x, y)
+  this.blitSprite = function(context, sourcePosition, x, y, rotation)
   {
     context.save();
-                
+        
+    context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
+    context.rotate( rotation * (Math.PI/2.0));
+
+    context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
+
+    context.restore();
+  }
+  
+  this.drawPiece = function(context, piece, x, y)
+  {               
     // Get the piece positions for this type:
     var piecePositions = getGraphicalTetronimoSourcePiecePositions(piece.type);
 
     // Translate the piece position into a source image coordinate:
     var sourcePosition = piecePositions[piece.index].multiply(squareSize);                          
 
-    context.translate(x*squareSize+(squareSize/2), (y-offscreen)*squareSize+(squareSize/2));
-    context.rotate( piece.rotation * (Math.PI/2.0));
-
-    context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
-
-    context.restore();
+    this.blitSprite(context, sourcePosition, x, y, piece.rotation);
   };
   
+  // this should call drawPiece.
   this.drawSlime = function(context, x, y, rotation)
   {
-    context.save();
-                
-    // Get the piece positions for this type:
-    var piecePositions = [];//getGraphicalTetronimoSourcePiecePositions(piece.type);
-
-    // Translate the piece position into a source image coordinate:
-    var sourcePosition = vector(0, 20).multiply(squareSize);                          
-
-    context.translate(x*squareSize+(squareSize/2), (y-offscreen)*squareSize+(squareSize/2));
-    context.rotate( rotation * (Math.PI/2.0));
-
-    context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
-
-    context.restore();
+    var sourcePosition = vector(0, 20).multiply(squareSize);
+    this.blitSprite(context, sourcePosition, x, y, rotation);
   };
 }
 
@@ -725,6 +748,7 @@ function gameLoop()
     nextPieceCanvas.width = 4 * squareSize+2*edgeOverlap;
     nextPieceCanvas.height = 4 * squareSize+2*edgeOverlap;
     nextPieceContext=nextPieceCanvas.getContext('2d');
+    nextPieceContext.translate(edgeOverlap, edgeOverlap);
   }
    
   console.log("Canvas discovered");
@@ -734,6 +758,7 @@ function gameLoop()
   canvas.height = canvasHeight;
   
   context.translate(edgeOverlap, edgeOverlap);
+  context.translate(0, -(offscreen*squareSize));
   drawBackground(context);
   
   // Display the 'game start' text, and attach events to the start button:
@@ -782,9 +807,9 @@ function drawBackground(context)
 {
   // Clear the drawing area:
   context.fillStyle = '#dfdfff';
-  context.fillRect(-edgeOverlap, -edgeOverlap, canvasWidth, canvasHeight);
+  context.fillRect(-edgeOverlap, -edgeOverlap+(offscreen*squareSize), canvasWidth, canvasHeight);
   
-  for(var y=0; y<gameHeight-offscreen; y++)
+  for(var y=offscreen; y<gameHeight; y++)
   {
     for(var x=0; x<gameWidth; x++)
     {
