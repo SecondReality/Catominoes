@@ -2,8 +2,10 @@
 squareSize = 34;  // The size of the tiles on the playing field
 edgeOverlap = 6; // The graphical size of the tiles (tiles slightly overlap)
 
-canvasWidth = gameWidth * squareSize+2*edgeOverlap;
-canvasHeight = (gameHeight-offscreen) * squareSize+2*edgeOverlap;
+function canvasResolution(logicalWidthOrHeight)
+{
+  return logicalWidthOrHeight * squareSize+2*edgeOverlap
+}
     
 window.onload = initializeGame;  
 
@@ -109,7 +111,7 @@ function Game(context, nextPieceContext, level)
   {
     // Clear the drawing area:
     nextPieceContext.fillStyle = '#dfdfff';
-    nextPieceContext.fillRect(-edgeOverlap, -edgeOverlap, canvasWidth, canvasHeight);
+    nextPieceContext.fillRect(-edgeOverlap, -edgeOverlap, canvasResolution(gameWidth), canvasResolution(gameHeight-offscreen));
   
     var nextPiece=new FallingPiece(gameState.getNextPiece(), vector(0, 0));
     this.drawFallingPiece(nextPieceContext, nextPiece);
@@ -143,11 +145,10 @@ function Game(context, nextPieceContext, level)
       // Draw the next piece that will fall:
       this.drawNextPiece();
               
+      // Draw the pieces that are on the board:
       var fallingPiece = gameState.getFallingPiece();
-      this.drawFallingPiece(context, fallingPiece);
-      
+      this.drawFallingPiece(context, fallingPiece);     
       var state = gameState.getGraphicalState();
-      
       var rowIndex = 0;
          
       for(var y = offscreen; y < gameState.getHeight(); y++)
@@ -329,7 +330,7 @@ function drawBackground(context)
 {
   // Clear the drawing area:
   context.fillStyle = '#dfdfff';
-  context.fillRect(-edgeOverlap, -edgeOverlap+(offscreen*squareSize), canvasWidth, canvasHeight);
+  context.fillRect(-edgeOverlap, -edgeOverlap+(offscreen*squareSize), canvasResolution(gameWidth), canvasResolution(gameHeight-offscreen));
   
   for(var y=offscreen; y<gameHeight; y++)
   {
@@ -361,10 +362,18 @@ jQuery.fn.center = function ()
 // Resizes the gameCanvas and centers the game in the window.
 function centerAndResize()
 {
+  var canvasHeight = canvasResolution(gameHeight-offscreen);
+  
   // Set the screen-size of the canvas element.
   var windowHeight=$(window).height(); 
-  var height = windowHeight < (canvasHeight+30) ? windowHeight-30 : canvasHeight;
+  var height = windowHeight < (canvasHeight+10) ? windowHeight-10 : canvasHeight;
+  
+  // Resize the piece preview canvas:
+  var ratio = height/canvasHeight;
+  var nextPieceCanvasHeight = windowHeight < (canvasHeight+10) ? ratio * canvasResolution(4) : canvasResolution(4);
+  
   $('#gameCanvas').height(height);
+  $('#nextPieceCanvas').height(nextPieceCanvasHeight);
   $('#gamearea').center();
 }
 
@@ -384,8 +393,8 @@ function initializeGame()
   {
     // Initialise the next piece canvas:
     var nextPieceCanvas = $('#nextPieceCanvas')[0];
-    nextPieceCanvas.width = 4 * squareSize+2*edgeOverlap;
-    nextPieceCanvas.height = 4 * squareSize+2*edgeOverlap;
+    nextPieceCanvas.width = canvasResolution(4);
+    nextPieceCanvas.height = canvasResolution(4);
     nextPieceContext=nextPieceCanvas.getContext('2d');
     nextPieceContext.translate(edgeOverlap, edgeOverlap);
   }
@@ -393,8 +402,8 @@ function initializeGame()
   var context = canvas.getContext('2d');
   
   // Set the resolution of the canvas: this isn't neccesarily how large it appears on screen.
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
+  canvas.width = canvasResolution(gameWidth);
+  canvas.height = canvasResolution(gameHeight-offscreen);
 
   centerAndResize();
   
