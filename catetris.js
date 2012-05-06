@@ -348,6 +348,28 @@ function drawBackground(context)
   }
 }
 
+// jQuery extension to center a div.
+// taken from http://stackoverflow.com/questions/210717/using-jquery-to-center-a-div-on-the-screen
+jQuery.fn.center = function ()
+{
+    this.css("position","absolute");
+    this.css("top", (($(window).height() - this.outerHeight()) / 2) + $(window).scrollTop() + "px");
+    this.css("left", (($(window).width() - this.outerWidth()) / 2) + $(window).scrollLeft() + "px");
+    return this;
+}
+
+// Resizes the gameCanvas and centers the game in the window.
+function centerAndResize()
+{
+  // Set the screen-size of the canvas element.
+  var windowHeight=$(window).height(); 
+  var height = windowHeight < (canvasHeight+30) ? windowHeight-30 : canvasHeight;
+  $('#gameCanvas').height(height);
+  $('#gamearea').center();
+}
+
+$(window).resize(centerAndResize);
+
 // Game entry point.
 function initializeGame()
 {
@@ -369,9 +391,12 @@ function initializeGame()
   }
    
   var context = canvas.getContext('2d');
-     
+  
+  // Set the resolution of the canvas: this isn't neccesarily how large it appears on screen.
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
+
+  centerAndResize();
   
   context.translate(edgeOverlap, edgeOverlap);
   context.translate(0, -(offscreen*squareSize));
