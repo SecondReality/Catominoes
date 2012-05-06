@@ -11,7 +11,10 @@ var globalGame = null;
 
 function log(message)
 {
-  console.log(message);
+  if(typeof variable !== 'undefined' && console.log)
+  {
+    console.log(message);
+  }
 }
 
 function updateTextDisplay(gameState)
@@ -53,7 +56,7 @@ function Game(context, nextPieceContext, level)
        if(completedRows.length>0)
        {        
          // Rows have been completed, flash the rows:
-         setTimeout(globalGame.flashRows.bind(globalGame), 200, 7, completedRows);        
+         setTimeout(globalGame.flashRowsBind(7, completedRows).bind(globalGame), 150);         
          updateTextDisplay(gameState);
          return;
        }
@@ -68,8 +71,8 @@ function Game(context, nextPieceContext, level)
      }
      setTimeout(globalGame.run.bind(globalGame), gameState.getSpeed());
   };
-  
-  // flashes flashingRows remainingFlashes times, and returns to run() after flashing finishes.
+   
+  // Flashes flashingRows remainingFlashes times, and returns to run() after the flashing finishes.
   this.flashRows = function(remainingFlashes, flashingRows)
   {   
     if(remainingFlashes===0)
@@ -88,7 +91,17 @@ function Game(context, nextPieceContext, level)
     this.drawBoard(parameter);
     
     remainingFlashes--;
-    setTimeout(globalGame.flashRows.bind(globalGame), 150, remainingFlashes, flashingRows);
+    setTimeout(globalGame.flashRowsBind(remainingFlashes, flashingRows).bind(globalGame), 150);
+  }
+  
+  // A wrapper around flashRows so that we don't have to pass additional parameters to setTimeout (which doesn't work in IE)
+  // Another solution could be to use: http://der-design.com/javascripts/cross-browser-settimeout
+  this.flashRowsBind = function(remainingFlashes, flashingRows)
+  {
+    return function()
+    {
+      this.flashRows(remainingFlashes, flashingRows);
+    };
   }
   
   // Draws the next piece that will fall in its own context.
@@ -341,7 +354,7 @@ function initializeGame()
   var canvas = $('#gameCanvas')[0];
   if(!canvas.getContext)
   {
-    console.log("Canvas not found");
+    log("Canvas not found");
     return;
   }
   
@@ -355,7 +368,6 @@ function initializeGame()
     nextPieceContext.translate(edgeOverlap, edgeOverlap);
   }
    
-  console.log("Canvas discovered");
   var context = canvas.getContext('2d');
      
   canvas.width = canvasWidth;
@@ -434,17 +446,17 @@ if (!Function.prototype.bind) {
 
 function unitTest()
 {
-  console.log("vector(10, 20)");
-  console.log(vector(10, 20));
+  log("vector(10, 20)");
+  log(vector(10, 20));
   
-  console.log("");
-  console.log("");
+  log("");
+  log("");
   
-  console.log("getGraphicalTetronimoSourcePiecePositions");
-  console.log(getGraphicalTetronimoSourcePiecePositions(0));
+  log("getGraphicalTetronimoSourcePiecePositions");
+  log(getGraphicalTetronimoSourcePiecePositions(0));
    
   var gameState = new GameState(4, 5);
   gameState.setPiece(1, 1, "Hello");
  
-  console.log("----- Unit tests complete -----");
+  log("----- Unit tests complete -----");
 }

@@ -200,7 +200,7 @@ function GameState(width, height, level)
     
     for(var y=minY+fallingPiece.position.y; y<=maxY+fallingPiece.position.y; y++)
     {
-      console.log("Checking row: "+y);
+      log("Checking row: "+y);
       var rowComplete = true;
       for(x=0; x<width; x++)
       {
@@ -393,7 +393,7 @@ function GameState(width, height, level)
     // This should really be a debug assert
     if(x!==0 && y!==0)
     {
-      console.log("illegal nudge");
+      log("illegal nudge");
     }
     
     if(!fallingPiece)
