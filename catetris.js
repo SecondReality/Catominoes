@@ -67,24 +67,7 @@ function FallingPiece(type, position)
   this.type = type;
   this.set = 0;
   var gridSize = getTetronimoGridSize(this.type);
-  
-  // Returns a 2d buffer containing the index to the type.
-  this.getBuffer = function()
-  {   
-    var piecePositions = this.getPiecePositions();
     
-    // Now generate the buffer:
-    var buffer = nullArray(gridSize*gridSize);
-    for(var i=0; i<piecePositions.length; i++)
-    {
-      var piece=new Piece(this.type, this.set, this.rotation, i); 
-      var index = to1D(piecePositions[i].x, piecePositions[i].y, gridSize);
-      buffer[index]=piece;
-    }
-       
-    return buffer;
-  }
-  
   this.getPiecePositions = function()
   {
     var piecePositions = getTetronimoPositions(this.type);
@@ -424,7 +407,7 @@ function updateTextDisplay(gameState)
 }
 
 // Handles tying input to game state, time and rendering:
-function Game(context, level)
+function Game(context, nextPieceContext, level)
 {     
   var spriteSheet = makeSprite("sprites.png");
   var depositBlockSound = new Audio("depositBlock.wav");
@@ -562,29 +545,31 @@ function Game(context, level)
     setTimeout(globalGame.flashRows.bind(globalGame), 150, remainingFlashes, flashingRows);
   }
   
+  this.drawNextPiece = function()
+  {
+    nextPieceContext
+  }
+  
   // hiddenRows is an optional parameter
   this.drawBoard = function(hiddenRows)
   {
       drawBackground(context);
+      
+      // Draw the next piece that will fall:
+      this.drawNextPiece();
               
       var fallingPiece = gameState.getFallingPiece();
         
       if(fallingPiece)
       {
-        // Why a 2D buffer? Why not a list of the coordinates instead?
-        var fallingBuffer=fallingPiece.getBuffer();
+        var piecePositions=fallingPiece.getPiecePositions();
         var gridSize=fallingPiece.getGridSize();
         
-        for(var y=0; y<gridSize; y++)
+        for(var i=0; i<piecePositions.length; i++)
         {
-          for(var x=0; x<gridSize; x++)
-          {
-            var piece=fallingBuffer[to1D(x, y, gridSize)];
-            if(piece)
-            {
-              this.drawPiece(context, piece, fallingPiece.position.x+x, fallingPiece.position.y+y);              
-            }
-          }
+          var piecePosition=piecePositions[i];
+          var piece=new Piece(fallingPiece.type, fallingPiece.set, fallingPiece.rotation, i); 
+          this.drawPiece(context, piece, fallingPiece.position.x+piecePosition.x, fallingPiece.position.y+piecePosition.y);
         }
       }
       
@@ -727,61 +712,70 @@ function draw()
 function gameLoop()
 {
   var canvas = $('#gameCanvas')[0];
-  if(canvas.getContext)
-  {
-    // Display the 'game start' text, and attach events to the start button:
-    $('#start').click(function()
-    {
-      $('#gameinfo').hide();
-      $('#gameinfo h3').text("Game Over!");
-      var level=$('#levelSelect').text();
-      game = new Game(context, level);
-      game.run();
-    });
-    
-    $('#rightarrow').click(function()
-    {
-      var level=$('#levelSelect').text();
-      if(level<20)
-      {
-        level++;
-      }
-      else
-      {
-        level=0;
-      }
-      
-      $('#levelSelect').text(level);
-    });
-  
-    $('#leftarrow').click(function()
-    {
-      var level=$('#levelSelect').text();
-      if(level>0)
-      {
-        level--;
-      }
-      else
-      {
-        level=20;
-      }
-      
-      $('#levelSelect').text(level);
-    });
-    
-    console.log("Canvas discovered");
-    var context = canvas.getContext('2d');
-       
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    
-    context.translate(edgeOverlap, edgeOverlap);
-    drawBackground(context);
-  }
-  else
+  if(!canvas.getContext)
   {
     console.log("Canvas not found");
+    return;
   }
+  
+  var nextPieceContext;
+  {
+    // Initialise the next piece canvas:
+    var nextPieceCanvas = $('#nextPieceCanvas')[0];
+    nextPieceCanvas.width = 4 * squareSize+2*edgeOverlap;
+    nextPieceCanvas.height = 4 * squareSize+2*edgeOverlap;
+    nextPieceContext=nextPieceCanvas.getContext('2d');
+  }
+   
+  console.log("Canvas discovered");
+  var context = canvas.getContext('2d');
+     
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  
+  context.translate(edgeOverlap, edgeOverlap);
+  drawBackground(context);
+  
+  // Display the 'game start' text, and attach events to the start button:
+  $('#start').click(function()
+  {
+    $('#gameinfo').hide();
+    $('#gameinfo h3').text("Game Over!");
+    var level=$('#levelSelect').text();
+    game = new Game(context, nextPieceContext, level);
+    game.run();
+  });
+  
+  $('#rightarrow').click(function()
+  {
+    var level=$('#levelSelect').text();
+    if(level<20)
+    {
+      level++;
+    }
+    else
+    {
+      level=0;
+    }
+    
+    $('#levelSelect').text(level);
+  });
+
+  $('#leftarrow').click(function()
+  {
+    var level=$('#levelSelect').text();
+    if(level>0)
+    {
+      level--;
+    }
+    else
+    {
+      level=20;
+    }
+    
+    $('#levelSelect').text(level);
+  });
+  
 }
 
 function drawBackground(context)

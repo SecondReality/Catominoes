@@ -37,7 +37,7 @@ function getTetronimoPositions(type)
 // Integer -> Integer
 function getTetronimoGridSize(type)
 { 
-  var gridSizes = [4, 3, 3, 2, 3, 3, 3];
+  var gridSizes = [4, 3, 3, 4, 3, 3, 3];
   return gridSizes[type];
 }
 
@@ -86,7 +86,7 @@ sourceOffsetPositions =
   vector(0, -1),
   vector(0, 2),
   vector(0, 5),
-  vector(0, 8),
+  vector(-1, 7),
   vector(0, 11),
   vector(0, 14),
   vector(0, 17)
@@ -97,7 +97,7 @@ tetronimoPositions =
   [vector(0, 1), vector(1, 1), vector(2, 1), vector(3, 1)],
   [vector(0, 0), vector(0, 1), vector(1, 1), vector(2, 1)],
   [vector(2, 0), vector(0, 1), vector(1, 1), vector(2, 1)],
-  [vector(0, 0), vector(0, 1), vector(1, 0), vector(1, 1)],
+  [vector(1, 1), vector(2, 1), vector(1, 2), vector(2, 2)], //[vector(0, 0), vector(0, 1), vector(1, 0), vector(1, 1)],
   [vector(1, 0), vector(2, 0), vector(0, 1), vector(1, 1)],
   [vector(1, 0), vector(0, 1), vector(1, 1), vector(2, 1)],
   [vector(0, 0), vector(1, 0), vector(1, 1), vector(2, 1)]
