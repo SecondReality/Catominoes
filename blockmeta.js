@@ -30,7 +30,7 @@ function getGraphicalTetronimoSourcePiecePositions(type)
 // Integer -> [Vector]
 function getTetronimoPositions(type)
 {   
-  return tetronimoPositions[type].clone();
+  return jQuery.extend(true, [], tetronimoPositions[type]);
 }
 
 // Returns how large the coordinate space is (width and height) for the given type.
@@ -64,22 +64,6 @@ function getAdjacent(type, index)
 }
 
 //------ Private variables (do not access from outside this file) ------
-
-// Deep clone function
-Object.prototype.clone = function()
-{
-  var newObj = (this instanceof Array) ? [] : {};
-  for (i in this)
-  {
-    if (i == 'clone') continue;
-    if (this[i] && typeof this[i] == "object")
-    {
-      newObj[i] = this[i].clone();
-    }
-    else newObj[i] = this[i];
-  }
-  return newObj;
-};
 
 sourceOffsetPositions =
 [
