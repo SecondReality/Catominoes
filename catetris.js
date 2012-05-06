@@ -1,10 +1,14 @@
 gameWidth=10;
 gameHeight = 22;
+offscreen = 2;  // The amount of rows that are not visible at the top of the screen
 
 // Render system:
 squareSize = 34;  // The size of the tiles on the playing field
 edgeOverlap = 6; // The graphical size of the tiles (tiles slightly overlap)
 
+canvasWidth = gameWidth * squareSize+2*edgeOverlap;
+canvasHeight = (gameHeight-offscreen) * squareSize+2*edgeOverlap;
+    
 window.onload = draw;  
 
 function log(message)
@@ -81,14 +85,43 @@ function nullArray(size)
   return array;
 }
 
+// Returns the score awarded when the given amount of lines are cleared on the given level.
+function lineClearedPoints(level, linesCleared)
+{
+  switch(linesCleared)
+  {
+    case 0:
+      return 0;
+    case 1:
+      return 40*(level + 1);
+    case 2:
+      return 100*(level + 1);
+    case 3:
+      return 300*(level + 1);
+    case 4:
+      return 1200*(level + 1);
+  }
+  return linesCleared;
+}
+
+// Returns the time (ms) for a block to fall one space
+function gameSpeed(level)
+{
+  return 300-(12 * level);
+}
+
 // Game State class
-function GameState(widthIn, heightIn)
+function GameState(widthIn, heightIn, level)
 {
   var width = widthIn;
   var height = heightIn;
   var nextPiece = 0;
   var boardState = nullArray(width * height);
   var fallingPiece = null;
+  var linesCleared = 0;
+  var score = 0;
+  linesClearedThisLevel=0;
+  var speed = gameSpeed(level);
   
   // Returns the piece if one has been deposited
   this.update = function()
@@ -120,7 +153,7 @@ function GameState(widthIn, heightIn)
         var depositedPiece=fallingPiece;
         fallingPiece = null;
         return depositedPiece;  
-      }     
+      }
     }
   };
   
@@ -168,6 +201,21 @@ function GameState(widthIn, heightIn)
         completedRows.push(y);
       }
     }
+    
+    linesCleared+=completedRows.length;
+    score+=lineClearedPoints(level, completedRows.length);
+    linesClearedThisLevel+=completedRows.length;
+    if(linesClearedThisLevel>=10)
+    {
+      level++;
+      speed = gameSpeed(level);
+      linesClearedThisLevel=0;
+    }
+    if(level>20)
+    {
+      level=20;
+    }
+    
     return completedRows;
   }
 
@@ -189,6 +237,22 @@ function GameState(widthIn, heightIn)
     }
   }
   
+  this.isGameOver = function()
+  {
+    for(var y=0; y<offscreen; y++)
+    {
+      for(var x=0; x<width; x++)
+      {
+        var index=to1D(x, y, width);
+        if(boardState[index]!=null)
+        {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  
   this.getFallingPiece = function()
   {
     return fallingPiece;
@@ -197,6 +261,26 @@ function GameState(widthIn, heightIn)
   this.getWidth = function()
   {
     return width;
+  };
+  
+  this.getLinesCleared = function()
+  {
+    return linesCleared;
+  };
+  
+  this.getScore = function()
+  {
+    return score;
+  };
+  
+  this.getLevel = function()
+  {
+    return level;
+  };
+  
+  this.getSpeed = function()
+  {
+    return speed;
   };
   
   this.getHeight = function()
@@ -309,13 +393,22 @@ function inGrid(width, height, point)
   return false;
 }
 
-// Handles tying input to game state and rendering:
+function updateTextDisplay(gameState)
+{      
+  // Update the score and lines completed:
+  $('#lines').text(gameState.getLinesCleared());
+  $('#score').text(gameState.getScore());
+  $('#level').text(gameState.getLevel());
+}
+
+// Handles tying input to game state, time and rendering:
 function Game(context)
 {     
   var spriteSheet = makeSprite("sprites.png");
   var depositBlockSound = new Audio("depositBlock.wav");
   
-  var gameState = new GameState(gameWidth, gameHeight);
+  var gameState = new GameState(gameWidth, gameHeight, 0);
+  updateTextDisplay(gameState);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
   
@@ -345,7 +438,6 @@ function Game(context)
       }
       case 83:
       {
-        // Should nudging downwards reset the time till the next update?
         gameState.nudgeDown();
         globalGame.drawBoard();
         break;
@@ -358,27 +450,28 @@ function Game(context)
   });
   
   // Touch controls:
-  var obj = document.getElementById('gameCanvas');
-  obj.addEventListener('touchstart', function(event)
+  $("canvas")[0].addEventListener('touchstart', function(event)
   {
     // If there's exactly one finger inside this element
     if (event.targetTouches.length == 1) {
       var touch = event.targetTouches[0];
       
+      touchX = touch.pageX - $("canvas").position().left;
+      touchY = touch.pageY - $("canvas").position().top;
       
-      if(touch.pageY < (gameState.getFallingPiece().position.y *squareSize) - 100)
+      if(touchY < (gameState.getFallingPiece().position.y *squareSize) - 100)
       {
         gameState.rotateClockwise();
         globalGame.drawBoard();
       }
       
-      if(touch.pageY > (gameState.getFallingPiece().position.y *squareSize)+100)
+      if(touchY > (gameState.getFallingPiece().position.y *squareSize)+100)
       {
         gameState.nudgeDown();
         globalGame.drawBoard();
       }
       
-      if(touch.pageX < (gameState.getFallingPiece().position.x *squareSize))
+      if(touchX < (gameState.getFallingPiece().position.x *squareSize))
       {
         gameState.nudgeLeft();
         globalGame.drawBoard();
@@ -391,6 +484,11 @@ function Game(context)
     }
   }, false);
    
+  this.displayGameOver=function()
+  {
+    // Check if the game should end (checks if pieces are in the top two rows)
+  }
+  
   this.run = function()
   {
      this.drawBoard();
@@ -400,13 +498,23 @@ function Game(context)
        depositBlockSound.play();
        var completedRows=gameState.checkRowCompletion(depositedBlock);
        if(completedRows.length>0)
-       {
+       {        
          // Rows have been completed, flash the rows:
-         setTimeout(globalGame.flashRows.bind(globalGame), 200, 10, completedRows);
+         setTimeout(globalGame.flashRows.bind(globalGame), 200, 7, completedRows);        
+         updateTextDisplay(gameState);
+
          return;
        }
+       else
+       {
+         if(gameState.isGameOver())
+         {
+           this.displayGameOver();
+           return;
+         }
+       }
      }
-     setTimeout(globalGame.run.bind(globalGame), 500);
+     setTimeout(globalGame.run.bind(globalGame), gameState.getSpeed());
   };
   
   this.flashRows = function(remainingFlashes, flashingRows)
@@ -414,6 +522,11 @@ function Game(context)
     if(remainingFlashes===0)
     {
       gameState.removeRowsAndDropDown(flashingRows);
+      if(gameState.isGameOver())
+      {
+        this.displayGameOver();
+        return;
+      }
       this.run();
       return;
     }
@@ -422,7 +535,7 @@ function Game(context)
     this.drawBoard(parameter);
     
     remainingFlashes--;
-    setTimeout(globalGame.flashRows.bind(globalGame), 200, remainingFlashes, flashingRows);
+    setTimeout(globalGame.flashRows.bind(globalGame), 150, remainingFlashes, flashingRows);
   }
   
   // hiddenRows is an optional parameter
@@ -430,64 +543,6 @@ function Game(context)
   {
       drawBackground(context);
               
-      // Draw the game board:
-      var state = gameState.getGraphicalState();
-      
-      var rowIndex = 0;
-         
-      for(var y = 0; y < gameState.getHeight(); y++)
-      {
-        if(hiddenRows && rowIndex<hiddenRows.length && y===hiddenRows[rowIndex])
-        {
-          rowIndex++;
-          continue;
-        }
-        
-        for(var x = 0; x < gameState.getWidth(); x++)
-        {
-          var p = gameState.getPiece(x, y);
-          if(p)
-          {
-            this.drawPiece(context, p, x, y);
-                                     
-            // Draw the blood.
-            // Get a list of the connectivity pieces and rotate them to match the rotation of this piece:
-            var relativeAdjacent = getAdjacent(p.type, p.index);
-            rotateVectorArrayClockwise(relativeAdjacent, 1, p.rotation);
-            
-            for(var i=0; i<relativeAdjacent.length; i++)
-            {
-             // Check if the piece is still connected, if not - then draw slime:
-             var checkPosition=vector(x+relativeAdjacent[i].x, y+relativeAdjacent[i].y);
-                          
-             if(!inGrid(gameState.getWidth(), gameState.getHeight(), checkPosition))
-             {
-               continue;
-             }
-             
-             var checkPiece=state[to1D(checkPosition.x, checkPosition.y, gameState.getWidth())];
-             
-             if(checkPiece.type != p.type || p.index != relativeAdjacent[i].index)
-             {
-               continue;
-             }
-                          
-              var rotation=0;
-              if(Math.abs(relativeAdjacent[i].x)==1)
-              {
-                rotation = relativeAdjacent[i].x==1 ? 1 : 3;
-              }
-              else
-              {
-                rotation = relativeAdjacent[i].y==-1 ? 0: 2;
-              }
-              this.drawSlime(context, checkPosition.x, checkPosition.y, rotation)
-            }
-              
-          }
-        }
-      }
-      
       var fallingPiece = gameState.getFallingPiece();
         
       if(fallingPiece)
@@ -508,7 +563,81 @@ function Game(context)
           }
         }
       }
-  };
+      
+      var state = gameState.getGraphicalState();
+      
+      var rowIndex = 0;
+         
+      for(var y = offscreen; y < gameState.getHeight(); y++)
+      {
+        if(hiddenRows && rowIndex<hiddenRows.length && y===hiddenRows[rowIndex])
+        {
+          rowIndex++;
+          continue;
+        }
+        
+        for(var x = 0; x < gameState.getWidth(); x++)
+        {
+          var p = gameState.getPiece(x, y);
+          if(p)
+          {
+            this.drawPiece(context, p, x, y);              
+          }
+        }
+      }
+      
+      // Draw 'slime' where the pieces have been cut.
+      for(var y = offscreen; y < gameState.getHeight(); y++)
+      {
+        if(hiddenRows && rowIndex<hiddenRows.length && y===hiddenRows[rowIndex])
+        {
+          rowIndex++;
+          continue;
+        }
+        
+        for(var x = 0; x < gameState.getWidth(); x++)
+        {
+          var p = gameState.getPiece(x, y);
+          if(p)
+          {
+            // Get a list of the connected pieces and rotate them to match the rotation of this piece:
+            var relativeAdjacent = getAdjacent(p.type, p.index);
+            rotateVectorArrayClockwise(relativeAdjacent, 1, p.rotation);
+            
+            for(var i=0; i<relativeAdjacent.length; i++)
+            {
+             // Check if the piece is still connected, if not - then draw slime:
+             
+             var checkPosition=vector(x+relativeAdjacent[i].x, y+relativeAdjacent[i].y);
+                          
+             if(inGrid(gameState.getWidth(), gameState.getHeight(), checkPosition))
+             {
+               var checkPiece=state[to1D(checkPosition.x, checkPosition.y, gameState.getWidth())];
+               
+               if(checkPiece!=null)
+               {
+                 if(checkPiece.type == p.type && checkPiece.index == relativeAdjacent[i].index)
+                 {
+                   continue;
+                 }
+               }
+             }
+                          
+              var rotation=0;
+              if(Math.abs(relativeAdjacent[i].x)==1)
+              {
+                rotation = relativeAdjacent[i].x==1 ? 1 : 3;
+              }
+              else
+              {
+                rotation = relativeAdjacent[i].y==-1 ? 0: 2;
+              }
+              this.drawSlime(context, checkPosition.x, checkPosition.y, rotation);
+            }
+          }
+        }
+      }
+};
   
   this.drawPiece = function(context, piece, x, y)
   {
@@ -520,7 +649,7 @@ function Game(context)
     // Translate the piece position into a source image coordinate:
     var sourcePosition = piecePositions[piece.index].multiply(squareSize);                          
 
-    context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
+    context.translate(x*squareSize+(squareSize/2), (y-offscreen)*squareSize+(squareSize/2));
     context.rotate( piece.rotation * (Math.PI/2.0));
 
     context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
@@ -538,7 +667,7 @@ function Game(context)
     // Translate the piece position into a source image coordinate:
     var sourcePosition = vector(0, 20).multiply(squareSize);                          
 
-    context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
+    context.translate(x*squareSize+(squareSize/2), (y-offscreen)*squareSize+(squareSize/2));
     context.rotate( rotation * (Math.PI/2.0));
 
     context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
@@ -587,8 +716,10 @@ function gameLoop()
     console.log("Canvas discovered");
     var context = canvas.getContext('2d');
        
-    canvas.width = gameWidth * squareSize;
-    canvas.height = gameHeight * squareSize;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    
+    context.translate(edgeOverlap, edgeOverlap);
        
     game = new Game(context);
     game.run();
@@ -601,9 +732,12 @@ function gameLoop()
 
 function drawBackground(context)
 {
-  for(var y=0; y<gameHeight; y++)
+  // Clear the drawing area:
+  context.fillStyle = '#dfdfff';
+  context.fillRect(-edgeOverlap, -edgeOverlap, canvasWidth, canvasHeight);
+  
+  for(var y=0; y<gameHeight-offscreen; y++)
   {
-    //for(var x=(y%2) ? 1 : 0; x<gameWidth; x+=2)
     for(var x=0; x<gameWidth; x++)
     {
       if((x+y)%2)
@@ -617,4 +751,29 @@ function drawBackground(context)
       context.fillRect(x*squareSize, y*squareSize, squareSize, squareSize);  
     }   
   }
+}
+
+// for compatibility, from: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (oThis) {
+    if (typeof this !== "function") {
+      // closest thing possible to the ECMAScript 5 internal IsCallable function
+      throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
+    }
+
+    var aArgs = Array.prototype.slice.call(arguments, 1), 
+        fToBind = this, 
+        fNOP = function () {},
+        fBound = function () {
+          return fToBind.apply(this instanceof fNOP
+                                 ? this
+                                 : oThis || window,
+                               aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+
+    return fBound;
+  };
 }

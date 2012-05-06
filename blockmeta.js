@@ -2,7 +2,7 @@
 // * Where the pieces are located in the sprite sheet.
 // * The block coordinates that make up a given piece.
 // * The grid sizes of the pieces.
-
+    
 // Returns the block coordinate (not pixel coordinate) of where this type is located in the sprite sheet.
 // Integer -> Vector
 function getGraphicalTetronimoSourcePieceOffset(type)
@@ -39,6 +39,28 @@ function getTetronimoGridSize(type)
 { 
   var gridSizes = [4, 3, 3, 2, 3, 3, 3];
   return gridSizes[type];
+}
+
+// Returns adjacent squares, relative to the position of the piece with the given index.
+// -> [Vector (with additional .index member)]
+function getAdjacent(type, index)
+{
+  var piecePositions = getTetronimoPositions(type);
+  var piecePosition = getTetronimoPositions(type)[index];
+  
+  var adjacentPieces = [];
+  
+  for(var i=0; i<piecePositions.length; i++)
+  {
+    var relative = piecePositions[i].subtract(piecePosition);
+    if(Math.abs(relative.x)+Math.abs(relative.y)==1)
+    {
+      relative.index = i;
+      adjacentPieces.push(relative);
+    }
+    
+  }
+  return adjacentPieces;
 }
 
 //------ Private variables (do not access from outside this file) ------
