@@ -402,12 +402,12 @@ function updateTextDisplay(gameState)
 }
 
 // Handles tying input to game state, time and rendering:
-function Game(context)
+function Game(context, level)
 {     
   var spriteSheet = makeSprite("sprites.png");
   var depositBlockSound = new Audio("depositBlock.wav");
   
-  var gameState = new GameState(gameWidth, gameHeight, 0);
+  var gameState = new GameState(gameWidth, gameHeight, level);
   updateTextDisplay(gameState);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
@@ -487,6 +487,7 @@ function Game(context)
   this.displayGameOver=function()
   {
     // Check if the game should end (checks if pieces are in the top two rows)
+    $('#gameinfo').show();
   }
   
   this.run = function()
@@ -710,9 +711,49 @@ function draw()
 
 function gameLoop()
 {
-  var canvas = document.getElementById('gameCanvas');
-  if (canvas.getContext)
+  var canvas = $('#gameCanvas')[0];
+  if(canvas.getContext)
   {
+    // Display the 'game start' text, and attach events to the start button:
+    $('#start').click(function()
+    {
+      $('#gameinfo').hide();
+      $('#gameinfo h3').text("Game Over!");
+      var level=$('#levelSelect').text();
+      game = new Game(context, level);
+      game.run();
+    });
+    
+    $('#rightarrow').click(function()
+    {
+      var level=$('#levelSelect').text();
+      if(level<20)
+      {
+        level++;
+      }
+      else
+      {
+        level=0;
+      }
+      
+      $('#levelSelect').text(level);
+    });
+  
+    $('#leftarrow').click(function()
+    {
+      var level=$('#levelSelect').text();
+      if(level>0)
+      {
+        level--;
+      }
+      else
+      {
+        level=20;
+      }
+      
+      $('#levelSelect').text(level);
+    });
+    
     console.log("Canvas discovered");
     var context = canvas.getContext('2d');
        
@@ -720,9 +761,7 @@ function gameLoop()
     canvas.height = canvasHeight;
     
     context.translate(edgeOverlap, edgeOverlap);
-       
-    game = new Game(context);
-    game.run();
+    drawBackground(context);
   }
   else
   {
