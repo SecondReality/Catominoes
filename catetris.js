@@ -138,7 +138,6 @@ function GameState(widthIn, heightIn, level)
 {
   var width = widthIn;
   var height = heightIn;
-  var nextPiece = 0;
   var boardState = nullArray(width * height);
   var fallingPiece = null;
   var linesCleared = 0;
@@ -146,6 +145,7 @@ function GameState(widthIn, heightIn, level)
   linesClearedThisLevel=0;
   var speed = gameSpeed(level);
   var randomPieceBag = new RandomPieceBag();
+  var nextPiece = randomPieceBag.takePiece();
   
   // Returns the piece if one has been deposited
   this.update = function()
