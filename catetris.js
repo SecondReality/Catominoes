@@ -181,38 +181,47 @@ function Game(context, nextPieceContext, level)
         for(var x = 0; x < gameState.getWidth(); x++)
         {
           var p = gameState.getPiece(x, y);
-          if(p)
-          {
-            // Get a list of the connected pieces and rotate them to match the rotation of this piece:
-            var relativeAdjacent = getAdjacent(p.type, p.index);
-            rotateVectorArrayClockwise(relativeAdjacent, 1, p.rotation);
-            
-            for(var i=0; i<relativeAdjacent.length; i++)
-            {
-             // Check if the piece is still connected, if not - then draw slime:
-             var checkPosition=vector(x+relativeAdjacent[i].x, y+relativeAdjacent[i].y);
-                          
-             if(inGrid(gameState.getWidth(), gameState.getHeight(), checkPosition))
-             {
-               var checkPiece=state[to1D(checkPosition.x, checkPosition.y, gameState.getWidth())];
-               
-               if(checkPiece!=null)
-               {
-                 if(checkPiece.type == p.type && checkPiece.index == relativeAdjacent[i].index)
-                 {
-                   continue;
-                 }
-               }
-             }
-                          
-              var rotation = relativeAdjacent[i].y==-1 ? 0: 2;
-              
-              this.drawSlime(context, checkPosition.x, checkPosition.y, rotation);
-            }
-          }
+          this.drawSlimeForPiece(p, x, y);
         }
       }  
   };
+  
+  // Given a piece, calculates which sides have been cut and draws the slime.
+  this.drawSlimeForPiece = function(p, x, y)
+  {
+    if(!p)
+    {
+      return;
+    }
+    
+    var state = gameState.getGraphicalState();
+    
+    // Get a list of the connected pieces and rotate them to match the rotation of this piece:
+    var relativeAdjacent = getAdjacent(p.type, p.index);
+    rotateVectorArrayClockwise(relativeAdjacent, 1, p.rotation);
+    
+    for(var i=0; i<relativeAdjacent.length; i++)
+    {
+     // Check if the piece is still connected, if not - then draw slime:
+     var checkPosition=vector(x+relativeAdjacent[i].x, y+relativeAdjacent[i].y);
+                  
+     if(inGrid(gameState.getWidth(), gameState.getHeight(), checkPosition))
+     {
+       var checkPiece=state[to1D(checkPosition.x, checkPosition.y, gameState.getWidth())];
+       
+       if(checkPiece!=null)
+       {
+         if(checkPiece.type == p.type && checkPiece.index == relativeAdjacent[i].index)
+         {
+           continue;
+         }
+       }
+     }
+                  
+      var rotation = relativeAdjacent[i].y==-1 ? 0: 2;   
+      this.drawSlime(context, checkPosition.x, checkPosition.y, rotation);
+    } 
+  }
   
   // Draws a sprite from the sprite sheet.
   // Draws it to the logical x and y position of the board, with the given rotation.
