@@ -37,6 +37,29 @@ function rotateVectorArrayClockwise(array, gridSize, rotations)
   }
 }
 
+// Used to generate a pseudo-random piece, which stops players from losing the game simply because they were unlucky.
+function RandomPieceBag()
+{
+  var pieces=[];
+
+  this.takePiece = function()
+  {
+    if(pieces.length==0)
+    {
+      for(var i=0; i<7; i++)
+      {
+        pieces.push(i);
+      }
+    }
+    
+    var randomIndex=Math.floor(Math.random()*pieces.length);
+    var piece = pieces[randomIndex];
+    pieces.splice(randomIndex, 1);
+    return piece;
+  }
+  
+}
+
 function FallingPiece(type, position)
 {
   this.position = position;
@@ -122,6 +145,7 @@ function GameState(widthIn, heightIn, level)
   var score = 0;
   linesClearedThisLevel=0;
   var speed = gameSpeed(level);
+  var randomPieceBag = new RandomPieceBag();
   
   // Returns the piece if one has been deposited
   this.update = function()
@@ -130,8 +154,7 @@ function GameState(widthIn, heightIn, level)
     {
       fallingPiece = new FallingPiece(nextPiece, vector(5, 0));   
       
-      // Generate random number between 0 and 2:
-      nextPiece = Math.floor(Math.random()*7);
+      nextPiece = randomPieceBag.takePiece();
     }
     else
     {
@@ -165,7 +188,6 @@ function GameState(widthIn, heightIn, level)
     var fallingPiecePositions = fallingPiece.getPiecePositions();
     
    // Get the minimum and maximum y values of the newly added blocks.
-    // TODO: this could also be precalculated:
     var minY=fallingPiecePositions[0].y;
     var maxY=fallingPiecePositions[0].y;
     for(var i=1; i<fallingPiecePositions.length; i++)
@@ -492,8 +514,9 @@ function Game(context, level)
   
   this.run = function()
   {
-     this.drawBoard();
      var depositedBlock = gameState.update();
+     this.drawBoard();
+     
      if(depositedBlock)
      {
        depositBlockSound.play();
@@ -608,7 +631,6 @@ function Game(context, level)
             for(var i=0; i<relativeAdjacent.length; i++)
             {
              // Check if the piece is still connected, if not - then draw slime:
-             
              var checkPosition=vector(x+relativeAdjacent[i].x, y+relativeAdjacent[i].y);
                           
              if(inGrid(gameState.getWidth(), gameState.getHeight(), checkPosition))
@@ -624,15 +646,8 @@ function Game(context, level)
                }
              }
                           
-              var rotation=0;
-              if(Math.abs(relativeAdjacent[i].x)==1)
-              {
-                rotation = relativeAdjacent[i].x==1 ? 1 : 3;
-              }
-              else
-              {
-                rotation = relativeAdjacent[i].y==-1 ? 0: 2;
-              }
+              var rotation = relativeAdjacent[i].y==-1 ? 0: 2;
+              
               this.drawSlime(context, checkPosition.x, checkPosition.y, rotation);
             }
           }
