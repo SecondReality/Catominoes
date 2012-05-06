@@ -30,7 +30,12 @@ function getGraphicalTetronimoSourcePiecePositions(type)
 // Integer -> [Vector]
 function getTetronimoPositions(type)
 {   
-  return jQuery.extend(true, [], tetronimoPositions[type]);
+  var copy=[];
+  for(var i=0; i<tetronimoPositions[type].length; i++)
+  {
+    copy.push(tetronimoPositions[type][i].copy());
+  }
+  return copy;
 }
 
 // Returns how large the coordinate space is (width and height) for the given type.
