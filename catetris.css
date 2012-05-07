@@ -1,14 +1,14 @@
 
 body
 {
-  font-family: 'Fredoka One', cursive;
-  font-size: 20px;
+font-family: 'Vibur', cursive;
+
    background-image: url("background.gif");
 }
 
 canvas
 {
-  border: 5px solid black;
+  border: 5px solid grey;
   border-radius: 5px;
   float: left;
 }
@@ -21,10 +21,43 @@ canvas
   position: absolute;
 }
 
+#controls
+{
+  padding-top: 20px;
+    clear:both;
+      font-size: medium;
+}
+
+.key
+{
+  
+  border: 3px solid black;
+  border-radius: 3px;
+
+  width: 2em;
+  height: 2em;
+  display: inline-block;
+  
+  text-align:center;
+  vertical-align: middle;
+  display:table-cell;
+
+}
+
+#levelSelectRow
+{
+  font-size: 3em;
+}
+
+#start
+{
+  font-size: 2em;
+}
+
 #canvasWrapper
 {
   position: relative;
-
+    
  }
 
  #gametext
@@ -44,18 +77,18 @@ canvas
 
 #leftarrow
 {
-  font-size: 2em;
+
 }
 
 #rightarrow
 {
-  font-size: 2em;
+
 }
 
 #gameinfo h3
 {
   font-size: 5em;
-  text-shadow: 5px 5px 1px #999;
+  
   margin-top: 80px;
   margin-bottom: 5px;
 }

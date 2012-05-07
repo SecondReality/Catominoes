@@ -32,11 +32,13 @@ function Game(context, nextPieceContext, level)
 {     
   var spriteSheet = makeSprite("sprites.png");
   var depositBlockSound = new Audio("depositBlock.wav");
+  var rowCompletedSound = new Audio("rowCompleted.wav");
   
   var gameState = new GameState(gameWidth, gameHeight, level);
   updateTextDisplay(gameState);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
+  var paused=false;
     
   this.displayGameOver=function()
   {
@@ -44,10 +46,24 @@ function Game(context, nextPieceContext, level)
     $('#gameinfo').show();
   }
   
+  this.togglePause=function()
+  {
+    paused=!paused;
+    if(!paused)
+    {
+      this.run();
+    }
+  }
+  
   // Starts the game running.
   // It utilises setTimeout so it does not consume all the cpu in its loop.
   this.run = function()
   {
+     if(paused)
+     {
+       return;
+     }
+     
      var depositedBlock = gameState.update();
      this.drawBoard();
      
@@ -57,7 +73,8 @@ function Game(context, nextPieceContext, level)
        var completedRows=gameState.checkRowCompletion(depositedBlock);
        if(completedRows.length>0)
        {        
-         // Rows have been completed, flash the rows:
+         // Rows have been completed, play a sound and flash the rows:
+         rowCompletedSound.play();
          setTimeout(globalGame.flashRowsBind(7, completedRows).bind(globalGame), 150);         
          updateTextDisplay(gameState);
          return;
@@ -258,7 +275,7 @@ function Game(context, nextPieceContext, level)
   
     switch(event.keyCode)
     {
-      case 65:
+      case 65: // a
       {
         if(gameState.nudgeLeft())
         {
@@ -266,7 +283,7 @@ function Game(context, nextPieceContext, level)
         }
         break;
       }
-      case 68:
+      case 68: // d
       {
         if(gameState.nudgeRight())
         {
@@ -274,7 +291,7 @@ function Game(context, nextPieceContext, level)
         }
         break;
       }
-      case 87:
+      case 87: // w
       {
         if(gameState.rotateClockwise())
         {
@@ -282,12 +299,17 @@ function Game(context, nextPieceContext, level)
         }
         break;
       }
-      case 83:
+      case 83: // s
       {
         if(gameState.nudgeDown())
         {
           globalGame.drawBoard();
         }
+        break;
+      }
+      case 80: // p
+      {
+        globalGame.togglePause();
         break;
       }
       default:

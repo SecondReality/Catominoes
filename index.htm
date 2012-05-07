@@ -11,7 +11,7 @@
 <script type="text/javascript" src="gamecore.js"></script>
 <script type="text/javascript" src="catetris.js"></script>
 
-<link href='http://fonts.googleapis.com/css?family=Fredoka+One' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Vibur' rel='stylesheet' type='text/css'>
 
 <link rel="stylesheet" href="catetris.css" type="text/css"/>
 
@@ -26,7 +26,7 @@
   
   <div id="gameinfo">
     <h3>Catominoes</h3>
-    <span id="leftarrow"><</span>Level <span id="levelSelect">0</span><span id="rightarrow">></span><br>
+    <span id="levelSelectRow"><span id="leftarrow"><</span>Level <span id="levelSelect">0</span><span id="rightarrow">></span></span><br>
     <div id="start"><h2>Start!</h2></div>
   </div>
   
@@ -34,10 +34,20 @@
   
     <div id="gametext">
     
-    Score: <span id="score">0</span><br/>
-    Level: <span id="level">0</span><br/>
-    Lines: <span id="lines">0</span><br/>
-    <canvas id="nextPieceCanvas"></canvas>
+      Score: <span id="score">0</span><br/>
+      Level: <span id="level">0</span><br/>
+      Lines: <span id="lines">0</span><br/>
+      <canvas id="nextPieceCanvas"></canvas>
+      
+      <div id="controls">
+        Controls<br/>
+        <span class="key">W</span>Rotate<br/><div style="clear: both"></div>
+        <span class="key">A</span>Left<br/>
+        <span class="key">S</span>Down<br/>
+        <span class="key">D</span>Right<br/>
+        <span class="key">P</span>Pause<br/>
+      </div>
+    
     </div>
   
 	</div>
