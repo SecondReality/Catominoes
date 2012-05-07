@@ -1,16 +1,18 @@
 // Render system:
 squareSize = 34;  // The size of the tiles on the playing field
 edgeOverlap = 6; // The graphical size of the tiles (tiles slightly overlap)
+window.onload = initializeGame; // Entry point to the game
+globalGame = null;
+
+spriteSheet = makeSprite("sprites.png");
+depositBlockSound = new Audio("depositBlock.wav");
+rowCompletedSound = new Audio("rowCompleted.wav");
 
 function canvasResolution(logicalWidthOrHeight)
 {
   return logicalWidthOrHeight * squareSize+2*edgeOverlap
 }
     
-window.onload = initializeGame;  
-
-var globalGame = null;
-
 function log(message)
 {
   if(typeof variable !== 'undefined' && console.log)
@@ -27,13 +29,16 @@ function updateTextDisplay(gameState)
   $('#level').text(gameState.getLevel());
 }
 
+function makeSprite(source)
+{
+  var image = new Image();
+  image.src = source;
+  return image;
+}
+
 // Handles tying input to gameState, time and rendering:
 function Game(context, nextPieceContext, level)
-{     
-  var spriteSheet = makeSprite("sprites.png");
-  var depositBlockSound = new Audio("depositBlock.wav");
-  var rowCompletedSound = new Audio("rowCompleted.wav");
-  
+{       
   var gameState = new GameState(gameWidth, gameHeight, level);
   updateTextDisplay(gameState);
   var graphicalPieceSize = squareSize + edgeOverlap*2;
@@ -247,7 +252,10 @@ function Game(context, nextPieceContext, level)
     context.save();       
     context.translate(x*squareSize+(squareSize/2), y*squareSize+(squareSize/2));
     context.rotate( rotation * (Math.PI/2.0));
-    context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
+    if(spriteSheet.complete)
+    {
+      context.drawImage(spriteSheet, sourcePosition.x, sourcePosition.y, graphicalPieceSize, graphicalPieceSize, -(squareSize/2)-edgeOverlap, -(squareSize/2)-edgeOverlap, graphicalPieceSize, graphicalPieceSize);
+    }
     context.restore();
   }
   
@@ -390,21 +398,32 @@ jQuery.fn.center = function ()
     return this;
 }
 
-// Resizes the gameCanvas and centers the game in the window.
+// Resizes the gameCanvas' and centers the game in the window.
 function centerAndResize()
 {
   var canvasHeight = canvasResolution(gameHeight-offscreen);
+  var canvasWidth = canvasResolution(gameWidth);
   
   // Set the screen-size of the canvas element.
   var windowHeight=$(window).height(); 
   var height = windowHeight < (canvasHeight+10) ? windowHeight-10 : canvasHeight;
-  
-  // Resize the piece preview canvas:
   var ratio = height/canvasHeight;
-  var nextPieceCanvasHeight = windowHeight < (canvasHeight+10) ? ratio * canvasResolution(4) : canvasResolution(4);
   
+  var width = canvasWidth;
+  var nextPieceCanvasSize = canvasResolution(4);
+  
+  if(windowHeight < (canvasHeight+10))
+  {
+    width*=ratio;
+    nextPieceCanvasSize*=ratio;
+  }
+
+  $('#nextPieceCanvas').width(nextPieceCanvasSize);
+  $('#nextPieceCanvas').height(nextPieceCanvasSize);  
+  
+  $('#gameCanvas').width(width);
   $('#gameCanvas').height(height);
-  $('#nextPieceCanvas').height(nextPieceCanvasHeight);
+
   $('#gamearea').center();
 }
 

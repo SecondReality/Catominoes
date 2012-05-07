@@ -6,13 +6,6 @@ Vector = function(x, y)
   this.y = y;
 };
 
-function makeSprite(source)
-{
-  var image = new Image();
-  image.src = source;
-  return image;
-}
-
 Vector.prototype.add = function(v2)
 {
   return new Vector(this.x + v2.x, this.y + v2.y);

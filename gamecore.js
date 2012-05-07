@@ -146,7 +146,7 @@ function GameState(width, height, level)
   {
     if(!fallingPiece)
     {
-      fallingPiece = new FallingPiece(nextPiece, vector(5, 0));   
+      fallingPiece = new FallingPiece(nextPiece, vector(4, 0));   
       
       nextPiece = randomPieceBag.takePiece();
     }

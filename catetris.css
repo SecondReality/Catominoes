@@ -1,9 +1,7 @@
-
 body
 {
-font-family: 'Vibur', cursive;
-
-   background-image: url("background.gif");
+   font-family: 'Vibur', cursive;
+   background-color: #B9C196;
 }
 
 canvas
@@ -19,13 +17,16 @@ canvas
   margin-right: auto;
   width: 600px;
   position: absolute;
+  background-color: white;
+  padding: 10px;
+  border-radius: 10px;
 }
 
 #controls
 {
   padding-top: 20px;
-    clear:both;
-      font-size: medium;
+   clear:both;
+   font-size: medium;
 }
 
 .key
