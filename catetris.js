@@ -406,6 +406,7 @@ function centerAndResize()
   
   // Set the screen-size of the canvas element.
   var windowHeight=$(window).height(); 
+  
   var height = windowHeight < (canvasHeight+10) ? windowHeight-10 : canvasHeight;
   var ratio = height/canvasHeight;
   
@@ -426,8 +427,6 @@ function centerAndResize()
 
   $('#gamearea').center();
 }
-
-$(window).resize(centerAndResize);
 
 // Game entry point.
 function initializeGame()
@@ -450,15 +449,17 @@ function initializeGame()
   }
    
   var context = canvas.getContext('2d');
-  
+
   // Set the resolution of the canvas: this isn't neccesarily how large it appears on screen.
   canvas.width = canvasResolution(gameWidth);
   canvas.height = canvasResolution(gameHeight-offscreen);
 
   centerAndResize();
-  
+
   context.translate(edgeOverlap, edgeOverlap);
+
   context.translate(0, -(offscreen*squareSize));
+
   drawBackground(context);
   
   // Display the 'game start' text, and attach events to the start button:
@@ -501,6 +502,14 @@ function initializeGame()
     $('#levelSelect').text(level);
   });
   
+  $(window).focus(function()
+  {
+    // Fixes a bug that made the page go blank (only seemed to affect the Chrome version on my PC)
+    drawBackground(context);
+  });
+  
+  $(window).resize(centerAndResize);
+   
 }
 
 // for compatibility, from: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
