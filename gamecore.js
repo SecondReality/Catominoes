@@ -302,6 +302,11 @@ function GameState(width, height, level)
     return false;
   };
   
+  this.addDropScore = function(rows)
+  {
+    score+=rows;
+  };
+  
   this.getFallingPiece = function()
   {
     return fallingPiece;
