@@ -36,6 +36,43 @@ function makeSprite(source)
   return image;
 }
 
+// A small object that will allow me to keep track of the state of a key.
+// It works around problems such as missing key up events (which might happen for example
+// when the browser tab is changed while the tab is held, or during other rare events.
+
+function keyState()
+{
+  var lastKeyDown=0;
+  
+  this.setKeyDown = function()
+  {
+    lastKeyDown=new Date().getTime();
+  }
+  
+  this.setKeyup = function()
+  {
+    lastKeyDown=0;
+  }
+  
+  this.isKeyDown = function()
+  {
+    var now = new Date().getTime();
+
+    if(lastKeyDown==0)
+    {
+      return false;
+    }
+    
+    if(now-lastKeyDown > 1000)
+    {
+      lastKeyDown=0;
+      return false;
+    }
+    
+    return true;
+  }
+}
+
 // Handles tying input to gameState, time and rendering:
 function Game(context, nextPieceContext, level)
 {       
@@ -44,6 +81,9 @@ function Game(context, nextPieceContext, level)
   var graphicalPieceSize = squareSize + edgeOverlap*2;
   globalGame = this;
   var paused=false;
+  var downState = new keyState();
+  var downKeyStartRow=0;
+  var fastFall=false;
     
   this.displayGameOver=function()
   {
@@ -74,14 +114,23 @@ function Game(context, nextPieceContext, level)
      
      if(depositedBlock)
      {
+       // Reset the key state so the next block doesn't come flying down:
+       fastFall=false;
+       
+       // Award bonus points:
+       downKeyStartRow
+       
        depositBlockSound.play();
+       
+       gameState.addDropScore(depositedBlock.position.y-downKeyStartRow);
        var completedRows=gameState.checkRowCompletion(depositedBlock);
+       updateTextDisplay(gameState);
+       
        if(completedRows.length>0)
        {        
          // Rows have been completed, play a sound and flash the rows:
          rowCompletedSound.play();
          setTimeout(globalGame.flashRowsBind(7, completedRows).bind(globalGame), 150);         
-         updateTextDisplay(gameState);
          return;
        }
        else
@@ -93,7 +142,7 @@ function Game(context, nextPieceContext, level)
          }
        }
      }
-     setTimeout(globalGame.run.bind(globalGame), gameState.getSpeed());
+     setTimeout(globalGame.run.bind(globalGame), downState.isKeyDown() && fastFall ? gameState.getSpeed()*0.1 : gameState.getSpeed());
   };
    
   // Flashes flashingRows remainingFlashes times, and returns to run() after the flashing finishes.
@@ -276,7 +325,7 @@ function Game(context, nextPieceContext, level)
     var sourcePosition = vector(0, 20).multiply(squareSize);
     this.blitSprite(context, sourcePosition, x, y, rotation);
   };
-  
+   
   // Listen and respond to keyboard input:
   document.addEventListener('keydown', function(event)
   {
@@ -309,10 +358,20 @@ function Game(context, nextPieceContext, level)
       }
       case 83: // s
       {
-        if(gameState.nudgeDown())
+        // Record the state, because it's needed in run()    
+        var fallingPiece=gameState.getFallingPiece();
+        if(!downState.isKeyDown() && fallingPiece)
         {
-          globalGame.drawBoard();
+          fastFall=true;
+          downKeyStartRow=fallingPiece.position.y;
+          
+          if(gameState.nudgeDown())
+          {
+            globalGame.drawBoard();
+          }
         }
+        downState.setKeyDown();
+        
         break;
       }
       case 80: // p
@@ -327,41 +386,22 @@ function Game(context, nextPieceContext, level)
     }   
   });
   
-  // Touch controls:
-  $("canvas")[0].addEventListener('touchstart', function(event)
+  document.addEventListener('keyup', function(event)
   {
-    // If there's exactly one finger inside this element
-    if (event.targetTouches.length == 1) {
-      var touch = event.targetTouches[0];
-      
-      touchX = touch.pageX - $("canvas").position().left;
-      touchY = touch.pageY - $("canvas").position().top;
-      
-      if(touchY < (gameState.getFallingPiece().position.y *squareSize) - 100)
+    switch(event.keyCode)
+    {
+      case 83: // s
       {
-        gameState.rotateClockwise();
-        globalGame.drawBoard();
+        downState.setKeyup();
+        break;
       }
-      
-      if(touchY > (gameState.getFallingPiece().position.y *squareSize)+100)
+      default:
       {
-        gameState.nudgeDown();
-        globalGame.drawBoard();
-      }
-      
-      if(touchX < (gameState.getFallingPiece().position.x *squareSize))
-      {
-        gameState.nudgeLeft();
-        globalGame.drawBoard();
-      }
-      else
-      {
-        gameState.nudgeRight();
-        globalGame.drawBoard();
+        break;
       }
     }
-  }, false);
-  
+  });
+    
 }
 
 // Draws a checkered background for the main game area in the given context:
@@ -468,7 +508,7 @@ function initializeGame()
     $('#gameinfo').hide();
     $('#gameinfo h3').text("Game Over!");
     var level=$('#levelSelect').text();
-    game = new Game(context, nextPieceContext, level);
+    var game = new Game(context, nextPieceContext, level);
     game.run();
   });
   
@@ -505,7 +545,10 @@ function initializeGame()
   $(window).focus(function()
   {
     // Fixes a bug that made the page go blank (only seemed to affect the Chrome version on my PC)
-    drawBackground(context);
+    if(typeof game !== 'undefined')
+    {
+      drawBackground(context);
+    }
   });
   
   $(window).resize(centerAndResize);
