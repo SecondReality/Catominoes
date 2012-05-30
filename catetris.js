@@ -334,7 +334,7 @@ function Game(context, nextPieceContext, level)
     {
       case 65: // a
       {
-        if(gameState.nudgeLeft())
+        if(!paused && gameState.nudgeLeft())
         {
           globalGame.drawBoard();
         }
@@ -342,7 +342,7 @@ function Game(context, nextPieceContext, level)
       }
       case 68: // d
       {
-        if(gameState.nudgeRight())
+        if(!paused && gameState.nudgeRight())
         {
           globalGame.drawBoard();
         }
@@ -350,7 +350,7 @@ function Game(context, nextPieceContext, level)
       }
       case 87: // w
       {
-        if(gameState.rotateClockwise())
+        if(!paused && gameState.rotateClockwise())
         {
           globalGame.drawBoard();
         }
@@ -358,6 +358,10 @@ function Game(context, nextPieceContext, level)
       }
       case 83: // s
       {
+        if(paused)
+        {
+          break;
+        }
         // Record the state, because it's needed in run()    
         var fallingPiece=gameState.getFallingPiece();
         if(!downState.isKeyDown() && fallingPiece)
